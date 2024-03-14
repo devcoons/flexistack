@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "flexistack"
-version = "0.1.0dev1"
+version = "0.1.0-dev2"
 description = "Simple and easy to use framework"
 readme = "README.md"
 authors = [{ name = "Ioannis D (devcoons)", email = "support@devcoons.com" }]
@@ -18,8 +18,11 @@ classifiers = [
 ]
 keywords = ["flexistack","autoloader"]
 dependencies = [
-
+    "psutil==5.9.8",
+    "pyaes==1.6.1",
+    "pywin32; os_name == 'nt'",
 ]
+
 requires-python = ">=3.9"
 
 [project.optional-dependencies]

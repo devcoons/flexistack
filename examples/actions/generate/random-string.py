@@ -24,20 +24,16 @@
 #                                                                                       #
 #########################################################################################
 
-import os
-
 #########################################################################################
 # CLASS
 #########################################################################################
 
-class Plugin():
+class Action:
 
-    # FlexiStack plugin details
+    # FlexiStack action details
     # required from autoloader
     autoload = {
-        "name": "dummy-generator",
-        "version": "0.1.0",
-        "description": "This a dummy data generator plugin"
+        "description": 'Generate a random string'
     }
 
     # Dynamically loaded modules 
@@ -46,45 +42,63 @@ class Plugin():
 
     # Required modules list 
     #   Modify this list according to the
-    #   needs of this module
-    req_plugins = ["kk"]
+    #   need of this module
+    req_plugins = []
 
-    # Constructor
-    #   Only core operations to ensure that
-    #   the current module has all the
-    #   dependencies
-    def __init__(self, flexistack = None):
-        try:        
+    def __init__(self, flexistack):
+        try:
             self.flexistack = flexistack
             if len(self.req_plugins) == 0 or flexistack == None:
                 return
             if (set(self.req_plugins) - self.flexistack.plugins.keys()):
-                print(self.autoload['name']+" - [warn] missing required modules")
+                print(str(self.__class__)+" - [warn] missing required modules")
         except:
-            print(self.autoload['name']+" - [error] module could not be initialized")
+            print(str(self.__class__)+" - [errn] action could not be loaded")
 
-    # ###################################################################################
+    # ##################################################################
     # USER CODE SECTION 1 - START                                   
+    # ##################################################################
     # Use this section to define properties
-    # ################################################################################### 
 
+    length = None
 
-    # ###################################################################################
+    # ##################################################################
     # USER CODE SECTION 1 - END                                     
-    # ###################################################################################
+    # ##################################################################
 
-    # ###################################################################################
+    # ##################################################################
     # USER CODE SECTION 2 - START                                   
-    #      Use this section to define methods(functions)
-    # ###################################################################################
+    # ##################################################################
+    # Use this section to define methods(functions)
+        
+    def set_optional_arguments(self, parser,modules):
+        parser.add_argument('-l','--length', action='store', help="Requested string length")
 
+    # --------------------------------------------------------------------------------- #
+        
     def init(self,**kargs):
-        print ("Dummy Data Generator Init")
-        pass
+        try:
+            args = kargs['pargs']
+            if ('length' in args):
+                self.length = int(args['length'])
+                return True
+        except:
+            pass
+        return False         
+
+    # --------------------------------------------------------------------------------- #
 
     def run(self,**kargs):
-        return self.flexistack.helper.generate_random_string(64)
+        dummy_generator = self.flexistack.plugins['dummy-generator'].latest(self.flexistack)
+        print(dummy_generator.random_string(self.length))
+        return True
 
     # ##################################################################
     # USER CODE SECTION 2 - END                                     
-    # ##################################################################                                   
+    # ##################################################################
+
+
+    
+#########################################################################################
+# EOF
+#########################################################################################         

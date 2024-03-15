@@ -24,8 +24,6 @@
 #                                                                                       #
 #########################################################################################
 
-import os
-
 #########################################################################################
 # CLASS
 #########################################################################################
@@ -47,7 +45,7 @@ class Plugin():
     # Required modules list 
     #   Modify this list according to the
     #   needs of this module
-    req_plugins = ["kk"]
+    req_plugins = []
 
     # Constructor
     #   Only core operations to ensure that
@@ -68,7 +66,6 @@ class Plugin():
     # Use this section to define properties
     # ################################################################################### 
 
-
     # ###################################################################################
     # USER CODE SECTION 1 - END                                     
     # ###################################################################################
@@ -82,9 +79,12 @@ class Plugin():
         print ("Dummy Data Generator Init")
         pass
 
-    def run(self,**kargs):
-        return self.flexistack.helper.generate_random_string(128)
+    def random_string(self,length):
+        return self.flexistack.helper.generate_random_string(length)
 
+    def random_number(self,length):
+        return self.flexistack.helper.generate_random_string(length)
+    
     # ##################################################################
     # USER CODE SECTION 2 - END                                     
     # ##################################################################                                   

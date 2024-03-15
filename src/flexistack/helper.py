@@ -41,7 +41,7 @@ class Helper:
     """
     A collection of commonly used helper functions.
     """ 
-
+    
     def resolve_path(path):
         """ 
         Resolves the given path, resolving any symbolic links if present.
@@ -56,6 +56,8 @@ class Helper:
                 if os.path.exists(p+".lnk") == True:
                     p = Helper.shortcut_resolver(p+".lnk")
         return p
+
+    # --------------------------------------------------------------------------------- #
 
     def shortcut_resolver(item):
         """
@@ -72,11 +74,15 @@ class Helper:
         else:
             return None
 
+    # --------------------------------------------------------------------------------- #
+        
     def get_total_cpu():
         """
         Returns the total number of CPU cores, including logical and physical cores.
         """
         return [psutil.cpu_count(logical=False), psutil.cpu_count()]
+
+    # --------------------------------------------------------------------------------- #
 
     def generate_random_string(length):
         """
@@ -86,6 +92,18 @@ class Helper:
         random_string = ''.join(random.choice(characters) for _ in range(length))
         return random_string
 
+    # --------------------------------------------------------------------------------- #
+
+    def generate_random_number(length):
+        """
+        Generates a random string of specified length using ASCII letters and digits.
+        """
+        characters =  string.digits
+        random_string = ''.join(random.choice(characters) for _ in range(length))
+        return random_string
+    
+    # --------------------------------------------------------------------------------- #
+
     def get_total_mem():
         """
         Returns the total virtual and swap memory in gigabytes.
@@ -93,6 +111,8 @@ class Helper:
         virtual = round(psutil.virtual_memory().total / (1024*1024*1024), 1)
         swap = round(psutil.swap_memory().total / (1024*1024*1024), 1)
         return [virtual, swap]
+
+    # --------------------------------------------------------------------------------- #
 
     def filehash_md5(fname):
         """
@@ -104,6 +124,8 @@ class Helper:
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
 
+    # --------------------------------------------------------------------------------- #
+
     def filehash_sha256(fname):
         """
         Computes the SHA-256 hash of the specified file.
@@ -113,6 +135,8 @@ class Helper:
             for chunk in iter(lambda: f.read(4*65536), b""):
                 hash_256.update(chunk)
         return hash_256.hexdigest()
+
+    # --------------------------------------------------------------------------------- #
 
     def encrypt(key, plaintext):
         """
@@ -125,6 +149,8 @@ class Helper:
         ciphertext = aes.encrypt(plaintext)
         return base64.b64encode(ciphertext).decode('ascii')
 
+    # --------------------------------------------------------------------------------- #
+
     def decrypt(key, ciphertextb64):
         """
         Decrypts the base64 encoded ciphertext using AES algorithm with the provided key.
@@ -135,6 +161,8 @@ class Helper:
         aes = pyaes.AESModeOfOperationCTR(key)
         ciphertext = base64.b64decode(ciphertextb64)
         return aes.decrypt(ciphertext).decode('utf-8')
+
+    # --------------------------------------------------------------------------------- #
 
     def split_into_slices(A, slices):
         """
@@ -163,5 +191,6 @@ class Helper:
                     r.append((e & (am << (8 - mb))) >> (8 - mb))
             return r
         return None  
-    
-res = Helper.encrypt("hdsa","asdsadsadas")
+#########################################################################################
+# END OF FILE                                                                           #
+#########################################################################################

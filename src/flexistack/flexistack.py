@@ -31,10 +31,14 @@ import json
 import importlib
 import subprocess
 import argparse
+import random
+import string
+import copy
 from pathlib import Path
 from os.path import isfile, join
 from genericpath import isdir
 from importlib.machinery import SourceFileLoader
+from .helper import Helper
 
 def safe_import(package: str, version: str = None, package_as: str = None) -> None:
     """
@@ -95,6 +99,9 @@ class Plugin:
     m = None
     d = None
 
+    # --------------------------------------------------------------------------------- #
+    # --------------------------------------------------------------------------------- #
+
     def __init__(self, m, d):
         """
         Constructor method for the Module class.
@@ -106,7 +113,9 @@ class Plugin:
         self.m = m
         self.d = d
 
-    def __call__(self):
+    # --------------------------------------------------------------------------------- #
+        
+    def __call__(self,flexistack = None):
         """
         Returns the loaded module object when the Module instance 
         is called like a function.
@@ -114,7 +123,7 @@ class Plugin:
         Returns:
         - The loaded module object.
         """
-        return self.m
+        return self.m.Plugin(flexistack) if flexistack != None else self.m
 
 #########################################################################################
 # CLASS                                                                                 #
@@ -131,14 +140,18 @@ class PluginPack(dict):
         """
         pass
 
-    def latest(self):
+    # --------------------------------------------------------------------------------- #
+
+    def latest(self, flexistack = None):
         """
         Returns the latest version of the module in the ModulePack.
 
         Returns:
         - The Module object with the latest version number.
         """
-        return self[self.versions()[0]]
+        return self[self.versions()[0]](flexistack) if flexistack != None else self[self.versions()[0]]
+
+    # --------------------------------------------------------------------------------- #
 
     def versions(self):
         """
@@ -152,6 +165,45 @@ class PluginPack(dict):
         return sorted(self.keys(), key=lambda version: 
                   (tuple(map(int, version.split('.')))), 
                   reverse=True)
+
+#########################################################################################
+# CLASS                                                                                 #
+#########################################################################################
+
+class Action(dict):
+    """
+    A class that wraps a loaded module object and its description.
+    """
+    m = None
+    d = None
+    p = None
+
+    # --------------------------------------------------------------------------------- #
+    # --------------------------------------------------------------------------------- #
+
+    def __init__(self, m, d, p):
+        """
+        Constructor method for the Module class.
+
+        Args:
+        - m: A reference to a loaded module object.
+        - d: A string that describes the module.
+        """
+        self.m = m
+        self.d = d
+        self.p = p
+
+    # --------------------------------------------------------------------------------- #
+        
+    def __call__(self):
+        """
+        Returns the loaded module object when the Module instance 
+        is called like a function.
+
+        Returns:
+        - The loaded module object.
+        """
+        return self.m
 
 #########################################################################################
 # CLASS                                                                                 #
@@ -171,6 +223,8 @@ class Plugins(dict):
         """
         return list(self.keys())
 
+    # --------------------------------------------------------------------------------- #
+
     def details(self):
         """
         Returns a dictionary that maps each module name to a list of 
@@ -184,6 +238,8 @@ class Plugins(dict):
         for key in self.keys():
             r[key] = list(self[key].keys())
         return r
+
+    # --------------------------------------------------------------------------------- #
 
     def exists(self, mod_names):
         """
@@ -206,7 +262,6 @@ class Plugins(dict):
         else:
             return True if self.get(mod_names) is not None else False
 
-
 #########################################################################################
 # CLASS                                                                                 #
 #########################################################################################            
@@ -222,6 +277,7 @@ class Flexistack():
     plugins         = Plugins()
 
     # --------------------------------------------------------------------------------- #
+    # --------------------------------------------------------------------------------- #
 
     def __init__(self):
         """
@@ -229,6 +285,14 @@ class Flexistack():
         """
         self.uuid = uuid.uuid4().hex
 
+    # --------------------------------------------------------------------------------- #
+
+    @property    
+    def helper(self):
+        return Helper
+    
+    # --------------------------------------------------------------------------------- #
+        
     def load_plugins(self, dir_paths):
         """
         Loads all plugins from a specified directory and enlists them 
@@ -256,13 +320,13 @@ class Flexistack():
                 p_name = plugin.autoload['name']
                 p_vers = plugin.autoload['version']
                 p_desc = plugin.autoload['description']
-                module.__spec__.name = p_name + "v" \
-                                     + str(p_vers) \
-                                     + "_" + uuid.uuid4().hex
+                module_rnd = ''.join(random.choices(string.ascii_letters + string.digits, k=5))
                 if self.plugins.get(p_name) is None:
-                    self.plugins[p_name] = PluginPack()
-                self.plugins[p_name][p_vers] = Plugin(module, p_desc)
-            except:
+                    self.plugins[p_name] = PluginPack()  
+                self.plugins[p_name][p_vers] = Plugin(SourceFileLoader( p_name + "v" \
+                                     + str(p_vers) \
+                                     + "_" + module_rnd, module_full_path).load_module(), p_desc)
+            except  Exception as e:
                 pass 
 
         if isinstance(dir_paths,str):
@@ -275,6 +339,8 @@ class Flexistack():
             for m_path in modules_paths:
                 _load(m_path)              
 
+    # --------------------------------------------------------------------------------- #
+    
     def load_actions(self, parser, dir_paths):  
         """
         Loads all actions from a specified directory and enlists them 
@@ -290,45 +356,65 @@ class Flexistack():
                 elements = []
                 for element in os.listdir(_directory):
                     if isdir(join(_directory, element)):
-                        autoloader_filepath = os.path.abspath(os.path.normpath(os.path.join(_directory, element, ".autoloader")))
-                        if not os.path.exists(autoloader_filepath):
+                        flexiarg_filepath = os.path.abspath(os.path.normpath(os.path.join(_directory, element, ".flexiarg")))
+                        if not os.path.exists(flexiarg_filepath):
                             continue    
-                        with open(autoloader_filepath, 'r') as subparse_info_file:
+                        with open(flexiarg_filepath, 'r') as subparse_info_file:
                             subparse_data = json.load(subparse_info_file)
                             elements.append((subparse_data['z-index'],element,os.path.join(_directory, element),subparse_data['description']))                 
                     if isfile(join(_directory, element)) and ".py" in element and not ".pyc" in element and not "__init__" in element:
                         command  = element.replace(".py", "")
                         module = SourceFileLoader(command,os.path.join(_directory, element)).load_module()
-                        if "set_parser" in list(module.Action.__dict__.keys()):
-                            try:
-                                _app[command] = module
-                                if "get_arg_help" in list(_app[command].Action.__dict__.keys()):
-                                    __subparser = _subparser.add_parser(command,help=_app[command].Action(None).get_arg_help())
-                                    _app[command].Action(None).set_parser(__subparser, self)      
-                                else:                        
-                                    _app[command].Action(None).set_parser(_parser, self)      
-                            except:
-                                 print ("[core|"+os.path.basename(__file__)+"]: Issue with automatic action loading ("+command+"). Please check!") 
+                        if not hasattr(module,'Action'):
+                            del module
+                            continue
+                        action = module.Action(None)
+                        if not hasattr(action,'autoload'):
+                            del action, module
+                            continue  
+                        as_optional = action.autoload.get('as_optional')
+                        description = action.autoload.get('description')
+                        if description != None and as_optional == None and "set_optional_arguments" in list(module.Action.__dict__.keys()):
+                            _app[command] = module
+                            __subparser = _subparser.add_parser(command,help=description)
+                            _app[command].Action(None).set_optional_arguments(__subparser, self)
+                        elif description != None and as_optional != None:
+                            _app[command] = module
+                            _parser.add_argument('-'+command[0],'--'+command, action=as_optional, help=description)
+                        else:
+                            pass
                 elements.sort(key=lambda tup: tup[0])      
                 for elm in elements:
                     __parser = _subparser.add_parser(elm[1], help=elm[3])
                     __subparser = __parser.add_subparsers(title='Available commands', dest=elm[1]+'_action')
                     _app = add_action(_app,elm[2],__parser,__subparser)
             except Exception as e:
-                print ("[core|"+os.path.basename(__file__)+"]: Issue with automatic args loading. Please check!") 
+                raise Exception("Error: Flexistack `dir_paths` actions loading failed")
             return _app
 
-        subparsers  = parser.add_subparsers(title="Available action", dest='action') 
-
+        subparsers  = parser.add_subparsers(title="Available actions", dest='action') 
         if isinstance(dir_paths,str):
             dir_paths = [dir_paths]
-        if not isinstance(dir_paths,list):    
-             raise Exception("Error: Autoloader `dir_paths` required argument is not a type of list[str]")   
+        if not isinstance(dir_paths,list):
+             raise Exception("Error: Flexistack `dir_paths` required argument is not a type of list[str]")   
         for dir_path in dir_paths:
             dir_path = os.path.abspath(os.path.normpath(dir_path))          
             self.actions.update(add_action({},dir_path,parser,subparsers))
-
+        pass
+    # --------------------------------------------------------------------------------- #
+            
     def run(self, parsed_args, project_dir):
+        """
+        Executes actions based on parsed arguments and project directory.
+
+        Args:
+            self: The instance of the class.
+            parsed_args (dict): Parsed arguments containing action information.
+            project_dir (str): Directory path of the project.
+
+        Returns:
+            bool: True if action execution is successful, False otherwise.
+        """
         try:
             if parsed_args['action'] == None:
                 for opt_action in parsed_args:
@@ -358,6 +444,7 @@ class Flexistack():
         except Exception as e: 
             print(e)
             return False
+        
 #########################################################################################
 # END OF FILE                                                                           #
 #########################################################################################

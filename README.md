@@ -6,7 +6,7 @@ Installation
 You can install FlexiStack using pip:
 
 ```
-pip install `flexistack
+pip install flexistack
 ```
 
 ## Getting Started
@@ -25,7 +25,7 @@ Although FlexiStack supports various project structures, a recommended one is as
 
 A minimum setup in the `__main__.py` file to utilize FlexiStack:
 
-```
+```Python
 import os
 import flexistack
 import argparse

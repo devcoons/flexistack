@@ -48,14 +48,8 @@ if __name__=="__main__":
     # Loads actions
     fstack.load_actions(parser, os.path.join(project_dir, "actions"))
 
-
-    x = fstack.plugins['dummy-generator'].latest(fstack)
-    z = fstack.plugins['dummy-generator']['0.1.0']().Plugin(fstack)
-
-    k = fstack.plugins['dummy-generator']['0.1.0'](fstack)
     # Identify the positional arguments and select the appropriate app_route
     # to be executed 
-
     try:
         args, unknown = parser.parse_known_args()
         parsed_args = vars(args)       

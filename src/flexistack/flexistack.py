@@ -27,9 +27,13 @@
 import os
 import sys
 import uuid
+import json
 import importlib
 import subprocess
+import argparse
 from pathlib import Path
+from os.path import isfile, join
+from genericpath import isdir
 from importlib.machinery import SourceFileLoader
 
 def safe_import(package: str, version: str = None, package_as: str = None) -> None:
@@ -84,7 +88,7 @@ def safe_import(package: str, version: str = None, package_as: str = None) -> No
 # CLASS                                                                                 #
 #########################################################################################
 
-class Module:
+class Plugin:
     """
     A class that wraps a loaded module object and its description.
     """
@@ -116,7 +120,7 @@ class Module:
 # CLASS                                                                                 #
 #########################################################################################
 
-class ModulePack(dict):
+class PluginPack(dict):
     """
     A dictionary-like class that stores multiple versions of a 
     module under different version numbers as keys.
@@ -151,24 +155,13 @@ class ModulePack(dict):
 
 #########################################################################################
 # CLASS                                                                                 #
-#########################################################################################            
+#########################################################################################
 
-class Autoloader(dict):
+class Plugins(dict):
     """
-    A dictionary-like class that loads modules from a specified 
-    directory and caches them for future use.
+    A dictionary-like class that stores multiple versions of a 
+    module under different version numbers as keys.
     """
-
-    uuid            = None
-    
-    # --------------------------------------------------------------------------------- #
-
-    def __init__(self):
-        """
-        Constructor method for the Autoloader class.
-        """
-        self.uuid = uuid.uuid4().hex
-
     def info(self):
         """
         Returns a list of all the module names in the Autoloader.
@@ -213,22 +206,45 @@ class Autoloader(dict):
         else:
             return True if self.get(mod_names) is not None else False
 
-    def load(self, dir_paths):
+
+#########################################################################################
+# CLASS                                                                                 #
+#########################################################################################            
+
+class Flexistack():
+    """
+    A dictionary-like class that loads modules from a specified 
+    directory and caches them for future use.
+    """
+
+    uuid            = None
+    actions         = {}
+    plugins         = Plugins()
+
+    # --------------------------------------------------------------------------------- #
+
+    def __init__(self):
         """
-        Loads all modules from a specified directory and enlists them 
+        Constructor method for the Autoloader class.
+        """
+        self.uuid = uuid.uuid4().hex
+
+    def load_plugins(self, dir_paths):
+        """
+        Loads all plugins from a specified directory and enlists them 
         in the Autoloader.
 
         Args:
         - dir_paths: A string or list of strings representing the path(s) to the directory(ies) 
-          containing modules to load.  
+          containing the plugins to load.  
         """  
-        def module_load(module_full_path):  
+        def _load(module_full_path):  
             try:    
                 module = SourceFileLoader("module_candidate", module_full_path).load_module()
                 if not hasattr(module,'Plugin'):
                     del module
                     return
-                plugin = module.Plugin(self)
+                plugin = module.Plugin(None)
                 if not hasattr(plugin,'autoload'):
                     del plugin, module
                     return     
@@ -243,9 +259,9 @@ class Autoloader(dict):
                 module.__spec__.name = p_name + "v" \
                                      + str(p_vers) \
                                      + "_" + uuid.uuid4().hex
-                if self.get(p_name) is None:
-                    self[p_name] = ModulePack()
-                self[p_name][p_vers] = Module(module, p_desc)
+                if self.plugins.get(p_name) is None:
+                    self.plugins[p_name] = PluginPack()
+                self.plugins[p_name][p_vers] = Plugin(module, p_desc)
             except:
                 pass 
 
@@ -257,15 +273,91 @@ class Autoloader(dict):
             dir_path = os.path.abspath(os.path.normpath(dir_path))          
             modules_paths = [str(path) for path in list(Path(dir_path).rglob("*.py")) ]
             for m_path in modules_paths:
-                module_load(m_path)              
+                _load(m_path)              
 
+    def load_actions(self, parser, dir_paths):  
+        """
+        Loads all actions from a specified directory and enlists them 
+        in the Flexistack Actions.
+
+        Args:
+        - parser: argparser to be used
+        - dir_paths: A string or list of strings representing the path(s) to the directory(ies) 
+          containing the plugins to load.  
+        """  
+        def add_action(_app, _directory, _parser, _subparser):  
+            try:
+                elements = []
+                for element in os.listdir(_directory):
+                    if isdir(join(_directory, element)):
+                        autoloader_filepath = os.path.abspath(os.path.normpath(os.path.join(_directory, element, ".autoloader")))
+                        if not os.path.exists(autoloader_filepath):
+                            continue    
+                        with open(autoloader_filepath, 'r') as subparse_info_file:
+                            subparse_data = json.load(subparse_info_file)
+                            elements.append((subparse_data['z-index'],element,os.path.join(_directory, element),subparse_data['description']))                 
+                    if isfile(join(_directory, element)) and ".py" in element and not ".pyc" in element and not "__init__" in element:
+                        command  = element.replace(".py", "")
+                        module = SourceFileLoader(command,os.path.join(_directory, element)).load_module()
+                        if "set_parser" in list(module.Action.__dict__.keys()):
+                            try:
+                                _app[command] = module
+                                if "get_arg_help" in list(_app[command].Action.__dict__.keys()):
+                                    __subparser = _subparser.add_parser(command,help=_app[command].Action(None).get_arg_help())
+                                    _app[command].Action(None).set_parser(__subparser, self)      
+                                else:                        
+                                    _app[command].Action(None).set_parser(_parser, self)      
+                            except:
+                                 print ("[core|"+os.path.basename(__file__)+"]: Issue with automatic action loading ("+command+"). Please check!") 
+                elements.sort(key=lambda tup: tup[0])      
+                for elm in elements:
+                    __parser = _subparser.add_parser(elm[1], help=elm[3])
+                    __subparser = __parser.add_subparsers(title='Available commands', dest=elm[1]+'_action')
+                    _app = add_action(_app,elm[2],__parser,__subparser)
+            except Exception as e:
+                print ("[core|"+os.path.basename(__file__)+"]: Issue with automatic args loading. Please check!") 
+            return _app
+
+        subparsers  = parser.add_subparsers(title="Available action", dest='action') 
+
+        if isinstance(dir_paths,str):
+            dir_paths = [dir_paths]
+        if not isinstance(dir_paths,list):    
+             raise Exception("Error: Autoloader `dir_paths` required argument is not a type of list[str]")   
+        for dir_path in dir_paths:
+            dir_path = os.path.abspath(os.path.normpath(dir_path))          
+            self.actions.update(add_action({},dir_path,parser,subparsers))
+
+    def run(self, parsed_args, project_dir):
+        try:
+            if parsed_args['action'] == None:
+                for opt_action in parsed_args:
+                    if parsed_args[opt_action] == True:   
+                        obj = self.actions[opt_action].Action(self)
+                        if obj.init(project_dir=project_dir) == True:
+                            return obj.run()
+                        return False
+            else:
+                iterration = 0
+                cur_act_level = parsed_args['action']
+                while True:
+                    iterration = iterration + 1
+                    if iterration > 5:
+                        print("Error: Commands depths cannot be achived (inf.loop.breaker)")
+                        return False         
+                    if (cur_act_level+"_action" in parsed_args) and parsed_args[cur_act_level+"_action"] == None:
+                        print("Error: Incomplete command. Please use -h <--help> for more information")
+                        return False
+                    elif cur_act_level+"_action" in parsed_args:
+                        cur_act_level = parsed_args[cur_act_level+"_action"]
+                    else:    
+                        obj = self.actions[cur_act_level].Action(self)
+                        if obj.init(pargs=parsed_args,project_dir=project_dir) == True:
+                            return obj.run()                 
+                        return False 
+        except Exception as e: 
+            print(e)
+            return False
 #########################################################################################
 # END OF FILE                                                                           #
 #########################################################################################
-                
-if __name__=="__main__":
-   
-    a = Autoloader()
-    a.load(os.path.dirname(__file__)+"/..")
-    x = a.info()
-    pass

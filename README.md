@@ -77,7 +77,7 @@ Suppose you want to create a plugin called `data-generator` for generating rando
     
 2.  **Specify Plugin Details**: Inside `data_generator.py`, define a class named `Plugin` and specify the plugin details using the `autoload` attribute. For example:
     
-```
+```Python
 class Plugin:
         autoload = {
             "name": "data-generator",
@@ -89,7 +89,7 @@ class Plugin:
 3.  **Implement Plugin Functionality**: Add methods to the `Plugin` class for initialization and the functionality it provides. For instance:
    
 
-```
+```Python
 class Plugin:
         autoload = {
             "name": "data-generator",
@@ -127,7 +127,7 @@ Suppose you want to create an action called `shuffle` for shuffling a given stri
     
 2.  **Specify Action Details**: Inside `shuffle.py`, define a class named `Action` and specify the action details using the `autoload` attribute. For example:
     
-```
+```Python
    class Action:
         autoload = {
             "description": 'Shuffle a given string'
@@ -137,7 +137,7 @@ Suppose you want to create an action called `shuffle` for shuffling a given stri
 3.  **Implement Action Functionality**: Add methods to the `Action` class for initialization and the functionality it provides. For instance:
     
 
-```
+```Python
 class Action:
         autoload = {
             "description": 'Shuffle a given string'
@@ -161,7 +161,7 @@ Once you've defined a plugin, you can call its functionality from your actions. 
 2.  **Accessing Plugin Functionality**: Once loaded, you can access the functionality provided by a plugin by instantiating the plugin class and calling its methods. For example:
     
     
-```
+```Python
     # Access plugin functionality
     data_generator_plugin = fstack.plugins['data-generator'].latest(fstack)
     random_data = data_generator_plugin.generate_random_data()` 

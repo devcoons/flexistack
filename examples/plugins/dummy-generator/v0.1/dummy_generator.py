@@ -34,7 +34,7 @@ class Plugin():
     # required from autoloader
     autoload = {
         "name": "dummy-generator",
-        "version": "0.1.0",
+        "version": "0.1",
         "description": "This a dummy data generator plugin"
     }
 

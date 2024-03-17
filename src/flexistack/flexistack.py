@@ -275,6 +275,8 @@ class Flexistack():
     uuid            = None
     actions         = {}
     plugins         = Plugins()
+    parser          = None
+    parsed_args     = None
 
     # --------------------------------------------------------------------------------- #
     # --------------------------------------------------------------------------------- #
@@ -284,6 +286,7 @@ class Flexistack():
         Constructor method for the Autoloader class.
         """
         self.uuid = uuid.uuid4().hex
+        parser    = argparse.ArgumentParser()
 
     # --------------------------------------------------------------------------------- #
 
@@ -341,7 +344,7 @@ class Flexistack():
 
     # --------------------------------------------------------------------------------- #
     
-    def load_actions(self, parser, dir_paths):  
+    def load_actions(self, dir_paths):  
         """
         Loads all actions from a specified directory and enlists them 
         in the Flexistack Actions.
@@ -392,18 +395,37 @@ class Flexistack():
                 raise Exception("Error: Flexistack `dir_paths` actions loading failed")
             return _app
 
-        subparsers  = parser.add_subparsers(title="Available actions", dest='action') 
+        subparsers  = self.parser.add_subparsers(title="Available actions", dest='action') 
         if isinstance(dir_paths,str):
             dir_paths = [dir_paths]
         if not isinstance(dir_paths,list):
              raise Exception("Error: Flexistack `dir_paths` required argument is not a type of list[str]")   
         for dir_path in dir_paths:
             dir_path = os.path.abspath(os.path.normpath(dir_path))          
-            self.actions.update(add_action({},dir_path,parser,subparsers))
+            self.actions.update(add_action({},dir_path, self.parser, subparsers))
         pass
+    
     # --------------------------------------------------------------------------------- #
-            
-    def run(self, parsed_args, project_dir):
+
+    def load(self, actions_dirs, plugins_dirs):
+        self.load_plugins(plugins_dirs)
+        self.load_actions(actions_dirs)
+
+    # --------------------------------------------------------------------------------- #
+
+    def parse_arguments(self):
+        try:
+            args, unknown = self.parser.parse_known_args()
+            self.parsed_args = vars(args)       
+        except Exception as e: 
+            print(e)
+            print("Error: Invalid arguments")
+            exit() 
+        return self.parsed_args, unknown   
+
+    # --------------------------------------------------------------------------------- #
+
+    def run(self, project_dir, parsed_args = None):
         """
         Executes actions based on parsed arguments and project directory.
 
@@ -415,6 +437,9 @@ class Flexistack():
         Returns:
             bool: True if action execution is successful, False otherwise.
         """
+        if parsed_args == None:
+            parsed_args = self.parsed_args
+
         try:
             if parsed_args['action'] == None:
                 for opt_action in parsed_args:

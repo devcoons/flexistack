@@ -1,12 +1,16 @@
 # FlexiStack Framework
 
+[![PyPI - Version](https://img.shields.io/pypi/v/flexistack.svg)](https://pypi.org/project/flexistack)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/flexistack.svg)](https://pypi.org/project/flexistack)
+[![License: MIT](https://img.shields.io/badge/license-MIT-C06524)](https://github.com/devcoons/flexistack/blob/main/LICENSE.txt)
+
 FlexiStack is a Python package designed to facilitate the rapid development of modular Python applications. This framework consists of two main entities: actions and plugins. Actions are user-performed tasks exposed as application arguments, while plugins are functional components that users can consume within their actions. It simplifies the complexity of argument parsing and supports multiple versions of plugins.
 
 Installation
 You can install FlexiStack using pip:
 
 ```
-pip install `flexistack
+pip install flexistack
 ```
 
 ## Getting Started
@@ -25,37 +29,28 @@ Although FlexiStack supports various project structures, a recommended one is as
 
 A minimum setup in the `__main__.py` file to utilize FlexiStack:
 
-```
+```Python
 import os
 import flexistack
-import argparse
 
 project_dir = os.path.dirname(__file__)
 
 if __name__ == "__main__":
    
-    # Create an argument parser
-    parser = argparse.ArgumentParser()
+    # Create an instance of the Flexistack framework
+    fstack = flexistack.Flexistack()
 
-    # Create an instance of the FlexiStack framework
-    fstack = flexistack.FlexiStack()
+    # Load actions and plugins
+    fstack.load(os.path.join(project_dir, "actions"), 
+                os.path.join(project_dir, "plugins"))
 
-    # Load plugins
-    fstack.load_plugins(os.path.join(project_dir, "plugins"))
+    # Parse arguments
+    _, unknown_args = fstack.parse_arguments()
 
-    # Load actions
-    fstack.load_actions(parser, os.path.join(project_dir, "actions"))
-
-    # Identify the positional arguments and select the appropriate app_route to be executed
-    try:
-        args, unknown = parser.parse_known_args()
-        parsed_args = vars(args)       
-    except Exception as e: 
-        print(e)
-        print("Error: Invalid arguments")
-        exit()
-
-    fstack.run(parsed_args, project_dir)
+    # Execute actions/plugins based on given args
+    fstack.run(project_dir)
+    
+    pass
 ```    
 
 ## Example

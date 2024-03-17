@@ -167,9 +167,9 @@ Once you've defined a plugin, you can call its functionality from your actions. 
     random_data = data_generator_plugin.generate_random_data()` 
 ```  
 
-## Significance of .flexiarg File
+## Significance of .flexistack file in actions
 
-The `.flexiarg` file is a configuration file used by FlexiStack to provide additional metadata about actions. This metadata includes information such as the index of the action in the command-line argument list and a description of the action. By including this file in the action directory, developers can enhance the usability of their applications by providing more context about each action.  
+The `.flexistack` file is a configuration file used by FlexiStack to provide additional metadata about actions. This metadata includes information such as the index of the actions family in the command-line argument list and a description of the actions family. By including this file in the actions directory, developers can enhance the usability of their applications by providing more context about each actions family.  
 
 ## Conclusion
 

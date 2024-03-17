@@ -28,16 +28,17 @@ import os
 import sys
 import uuid
 import json
-import importlib
-import subprocess
-import argparse
 import random
 import string
-import copy
+import argparse
+import importlib
+import subprocess
+
 from pathlib import Path
-from os.path import isfile, join
 from genericpath import isdir
+from os.path import isfile, join
 from importlib.machinery import SourceFileLoader
+
 from .helper import Helper
 
 def safe_import(package: str, version: str = None, package_as: str = None) -> None:
@@ -335,7 +336,7 @@ class Flexistack():
         if isinstance(dir_paths,str):
             dir_paths = [dir_paths]
         if not isinstance(dir_paths,list):    
-             raise Exception("Error: Autoloader `dir_paths` required argument is not a type of list[str]")   
+             raise Exception("Error: Flexistack `dir_paths` required argument is not a type of list[str]")   
         for dir_path in dir_paths:
             dir_path = os.path.abspath(os.path.normpath(dir_path))          
             modules_paths = [str(path) for path in list(Path(dir_path).rglob("*.py")) ]
@@ -359,7 +360,7 @@ class Flexistack():
                 elements = []
                 for element in os.listdir(_directory):
                     if isdir(join(_directory, element)):
-                        flexiarg_filepath = os.path.abspath(os.path.normpath(os.path.join(_directory, element, ".flexiarg")))
+                        flexiarg_filepath = os.path.abspath(os.path.normpath(os.path.join(_directory, element, ".flexistack")))
                         if not os.path.exists(flexiarg_filepath):
                             continue    
                         with open(flexiarg_filepath, 'r') as subparse_info_file:

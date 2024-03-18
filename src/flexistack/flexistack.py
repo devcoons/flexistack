@@ -287,7 +287,7 @@ class Flexistack():
         Constructor method for the Autoloader class.
         """
         self.uuid = uuid.uuid4().hex
-        parser    = argparse.ArgumentParser()
+        self.parser    = argparse.ArgumentParser()
 
     # --------------------------------------------------------------------------------- #
 

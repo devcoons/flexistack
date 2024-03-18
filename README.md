@@ -1,5 +1,4 @@
-
-`# FlexiStack Framework
+# FlexiStack Framework
 
 [![PyPI - Version](https://img.shields.io/pypi/v/flexistack.svg)](https://pypi.org/project/flexistack)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/flexistack.svg)](https://pypi.org/project/flexistack)

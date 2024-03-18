@@ -83,7 +83,7 @@ class Plugin():
         return self.flexistack.helper.generate_random_string(length)
 
     def random_number(self,length):
-        return self.flexistack.helper.generate_random_string(length)
+        return self.flexistack.helper.generate_random_number(length)
     
     # ##################################################################
     # USER CODE SECTION 2 - END                                     

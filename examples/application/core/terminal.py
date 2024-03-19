@@ -30,58 +30,68 @@
 
 import os
 import sys
-import copy
-import time
+import re
 import json
+import time
+import string
 import datetime
-import importlib
-import subprocess
-import argparse
-
-from os import listdir
-from os.path import abspath, dirname, isfile, join
-from genericpath import isdir
+from threading import Lock
+from flexistack import safe_import
 
 #########################################################################################
 # SAFE-IMPORTS                                                                          #
 #########################################################################################
 
+safe_import("colorama")
+from colorama import just_fix_windows_console
+
 #########################################################################################
 # CLASS                                                                                 #
 #########################################################################################
 
-class Action:
-
-    # FlexiStack action details
-    # required from autoloader
-    _flexi_ = { 'type'           : 'action', 
-                'as_optional'    : 'store_true',
-                'description'    : 'Get application version'}
-
-    # Dynamically loaded modules 
-    # Do not modify (auto-populated)
-    flexistack = None
-
-    # Required modules list 
-    #   Modify this list according to the
-    #   need of this module
-    req_plugins = []
-
-    def __init__(self, flexistack):
-        try:
-            self.flexistack = flexistack
-            if len(self.req_plugins) == 0 or flexistack == None:
-                return
-            if (set(self.req_plugins) - self.flexistack.plugins.keys()):
-                print(str(self.__class__)+" - [wrn] missing required modules")
-        except:
-            print(str(self.__class__)+" - [err] action could not be loaded")
-
+class Terminal:
+    
+    # FlexiStack middleware details required by the framework
+    _flexi_ = { 'type'           : "middleware", 
+                'description'    : "" }
+    
+    # Constructor
+    #   Only core operations to ensure that the current module
+    #   is set as a property in framework's middleware
+    def __init__(self, middleware):
+        setattr(middleware, self.__class__.__name__.lower(), self)
+        if hasattr(self, 'init'):
+            self.init()
+        
     # ###################################################################################
     # USER CODE SECTION 1 - START                                                       #
     # Use this section to define properties                                             #
     # ###################################################################################
 
+    C_RD        = "\033[31m"
+    C_GR        = "\033[32m"           
+    C_YW        = "\033[33m"     
+    C_BL        = "\033[34m"  
+    C_MG        = "\033[35m"  
+    C_CB        = "\033[36m" 
+    C_BB        = "\033[90m"
+    C_BW        = "\033[97m"
+    F_SU        = "\033[4m"
+    F_EU        = "\033[24m"    
+    RST         = "\033[0m"
+    INV         = "\033[7m"
+    NRM         = "\033[27m"
+
+    # --------------------------------------------------------------------------------- #
+
+    supports_ansi   = False
+    max_columns     = 118
+
+    current_mode    = -1
+    loop_max_sz     = 8
+    text_buff       = []
+    lock_print      = None
+    
     # ###################################################################################
     # USER CODE SECTION 1 - END                                                         #
     # ###################################################################################
@@ -90,36 +100,46 @@ class Action:
     # USER CODE SECTION 2 - START                                                       #
     #      Use this section to define methods(functions)                                #
     # ###################################################################################
-
-    def init(self,**kargs):
-        return True         
+    
+    def init(self):
+        try:
+            self.lock_print = Lock()
+            if sys.platform.startswith("win"):
+                just_fix_windows_console()
+                import ctypes
+                kernel32 = ctypes.windll.kernel32
+                _mode = ctypes.c_uint32()
+                kernel32.GetConsoleMode(kernel32.GetStdHandle(-11), 
+                                        ctypes.byref(_mode))
+                self.supports_ansi = _mode.value & 0x0004 != 0
+            else:
+                self.supports_ansi = True  
+            print("",end="", flush=True)
+            try:
+                self.max_columns = os.get_terminal_size().columns-2
+            except:
+                self.max_columns = 118            
+            return True
+        except:
+            return False
 
     # --------------------------------------------------------------------------------- #
-
-    def run(self,**kargs):
-        _print = self.flexistack.middleware.terminal.print
-        _print("Application - Testing application")
-        _print(" - Available actions: "+str(len(self.flexistack.actions)))
-        for action in self.flexistack.actions:
-            if self.flexistack.actions[action].Action._flexi_.get("as_optional") == None:
-                _print("  - "+action+": "+self.flexistack.actions[action].Action._flexi_.get("description"))
-            else:
-                _print("  - --"+action+": "+self.flexistack.actions[action].Action._flexi_.get("description"))    
-        _print(" - Available plugins: "+str(len(self.flexistack.plugins)))   
-        for plugin in self.flexistack.plugins:
-            versions = self.flexistack.plugins[plugin].versions()
-            versions.sort(reverse=False)
-            for v in versions:
-                rv = self.flexistack.plugins[plugin][v].d
-                if rv == None or rv == "":
-                    rv = "No available description"
-                _print("  - "+plugin+" ("+str(v)+"): "+rv)
-        return True
-
+        
+    def set_mode(self):
+        pass
+        
+    # --------------------------------------------------------------------------------- #
+    
+    def print(self, args):
+        self.lock_print.acquire()
+        print(args)
+        self.lock_print.release()
+        pass
+        
     # ###################################################################################
     # USER CODE SECTION 2 - END                                                         #
     # ###################################################################################
 
 #########################################################################################
 # EOF                                                                                   #
-#########################################################################################    
+#########################################################################################

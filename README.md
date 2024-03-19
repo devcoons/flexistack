@@ -1,14 +1,16 @@
 # FlexiStack Framework
 
-[![PyPI - Version](https://img.shields.io/pypi/v/flexistack.svg)](https://pypi.org/project/flexistack)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/flexistack.svg)](https://pypi.org/project/flexistack)
-[![License: MIT](https://img.shields.io/badge/license-MIT-C06524)](https://github.com/devcoons/flexistack/blob/main/LICENSE.txt)
+[![PyPI - Version](https://img.shields.io/pypi/v/flexistack?style=for-the-badge)](https://pypi.org/project/flexistack)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/flexistack?style=for-the-badge)
+![GitHub License](https://img.shields.io/github/license/devcoons/flexistack?style=for-the-badge)
+![PyPI - Wheel](https://img.shields.io/pypi/wheel/flexistack?style=for-the-badge&color=%23F0F)
+
 
 FlexiStack is a Python package designed to facilitate the rapid development of modular Python applications. This framework consists of two main entities: actions and plugins. Actions are user-performed tasks exposed as application arguments, while plugins are functional components that users can consume within their actions. It simplifies the complexity of argument parsing and supports multiple versions of plugins.
 
 ## Installation
 
-You can install FlexiStack using pip:` 
+You can install FlexiStack using pip:
 
 `pip install flexistack`
 
@@ -20,6 +22,8 @@ Although FlexiStack supports various project structures, a recommended one is as
 /project_directory 
 │ 
 ├── __main__.py 
+├── /core 
+│ └── ... 
 ├── /actions 
 │ └── ... 
 └── /plugins 
@@ -40,8 +44,8 @@ if __name__ == "__main__":
     # Create an instance of the Flexistack framework
     fstack = flexistack.Flexistack()
 
-    # Load actions and plugins
-    fstack.load(None,
+    # Load middleware, actions and plugins
+    fstack.load(os.path.join(project_dir, "core"),
                 os.path.join(project_dir, "actions"), 
                 os.path.join(project_dir, "plugins"))
 
@@ -60,7 +64,7 @@ FlexiStack supports plugins, which are functional components that users can cons
 
 1.  **Create Plugin Classes**: Define Python classes for each plugin version within the `plugins` directory of your project. Each plugin class should contain methods for initialization and the functionality it provides.
     
-2.  **Specify Plugin Details**: In each plugin class, define the `autoload` attribute with details about the plugin, such as its name, version, and description. This information helps FlexiStack manage and identify plugins effectively.
+2.  **Specify Plugin Details**: In each plugin class, define the `_flexi_` attribute with details about the plugin, such as its name, version, and description. This information helps FlexiStack manage and identify plugins effectively.
     
 3.  **Implement Plugin Functionality**: Inside the plugin class, implement the functionality that the plugin offers. This could include data generation, external API integration, or any other task that the plugin is designed for.
     
@@ -75,11 +79,12 @@ Suppose you want to create a plugin called `data-generator` for generating rando
 
 1.  **Define Plugin Class**: Create a new Python file named `data_generator.py` within the `plugins` directory of your project.
     
-2.  **Specify Plugin Details**: Inside `data_generator.py`, define a class named `Plugin` and specify the plugin details using the `autoload` attribute. For example:
+2.  **Specify Plugin Details**: Inside `data_generator.py`, define a class named `Plugin` and specify the plugin details using the `_flexi_` attribute. For example:
     
 ```Python
 class Plugin:
-        autoload = {
+        _flexi_ = {
+            "type": "plugin",
             "name": "data-generator",
             "version": "0.1",
             "description": "Plugin for generating random data"
@@ -91,7 +96,8 @@ class Plugin:
 
 ```Python
 class Plugin:
-        autoload = {
+        _flexi_ = {
+            "type": "plugin",
             "name": "data-generator",
             "version": "0.1",
             "description": "Plugin for generating random data"
@@ -125,11 +131,12 @@ Suppose you want to create an action called `shuffle` for shuffling a given stri
 
 1.  **Define Action Class**: Create a new Python file named `shuffle.py` within the `actions` directory of your project.
     
-2.  **Specify Action Details**: Inside `shuffle.py`, define a class named `Action` and specify the action details using the `autoload` attribute. For example:
+2.  **Specify Action Details**: Inside `shuffle.py`, define a class named `Action` and specify the action details using the `_flexi_` attribute. For example:
     
 ```Python
    class Action:
-        autoload = {
+        _flexi_ = {
+            "type": "action",
             "description": 'Shuffle a given string'
         }
 ```
@@ -139,7 +146,8 @@ Suppose you want to create an action called `shuffle` for shuffling a given stri
 
 ```Python
 class Action:
-        autoload = {
+        _flexi_ = {
+            "type": "action",
             "description": 'Shuffle a given string'
         }
     
@@ -164,7 +172,7 @@ Once you've defined a plugin, you can call its functionality from your actions. 
 ```Python
     # Access plugin functionality
     data_generator_plugin = fstack.plugins['data-generator'].latest(fstack)
-    random_data = data_generator_plugin.generate_random_data()` 
+    random_data = data_generator_plugin.generate_random_data()
 ```  
 
 ## Significance of .flexistack file in actions

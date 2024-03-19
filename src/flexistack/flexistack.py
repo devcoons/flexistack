@@ -24,14 +24,14 @@
 #                                                                                       #
 #########################################################################################
 
-import inspect
+
 import os
 import sys
-from trace import CoverageResults
 import uuid
 import json
 import random
 import string
+import inspect
 import argparse
 import importlib
 import subprocess
@@ -118,7 +118,7 @@ class Plugin:
 
     # --------------------------------------------------------------------------------- #
         
-    def __call__(self,flexistack = None):
+    def __call__(self, flexistack = None):
         """
         Returns the loaded module object when the Module instance 
         is called like a function.
@@ -316,17 +316,20 @@ class Flexistack():
                     del module
                     return
                 plugin = module.Plugin(None)
-                if not hasattr(plugin,'autoload'):
+                if not hasattr(plugin,'_flexi_'):
                     del plugin, module
                     return     
-                autoload_structure = {"name": str, "description": str, "version": str}
-                if not all(key in plugin.autoload and isinstance(plugin.autoload[key], value_type)
+                autoload_structure = {"type":str, "name": str, "description": str, "version": str}
+                if not all(key in plugin._flexi_ and isinstance(plugin._flexi_[key], value_type)
                     for key, value_type in autoload_structure.items()):
                     del plugin, module
                     return  
-                p_name = plugin.autoload['name']
-                p_vers = plugin.autoload['version']
-                p_desc = plugin.autoload['description']
+                if plugin._flexi_.get("type") != "plugin":
+                    del plugin, module
+                    return                    
+                p_name = plugin._flexi_['name']
+                p_vers = plugin._flexi_['version']
+                p_desc = plugin._flexi_['description']
                 module_rnd = ''.join(random.choices(string.ascii_letters + string.digits, k=5))
                 if self.plugins.get(p_name) is None:
                     self.plugins[p_name] = PluginPack()  
@@ -364,8 +367,9 @@ class Flexistack():
                 module = SourceFileLoader("module_candidate", module_full_path).load_module()
                 classes = inspect.getmembers(module,inspect.isclass)
                 for class_name,_class in classes:
-                    if hasattr(_class,'fleximiddlew') and not hasattr(_class,'autoload'):
-                        _class(self.middleware)
+                    if hasattr(_class,'_flexi_'):
+                        if _class._flexi_.get('type') == "middleware":
+                            _class(self.middleware)
                 del module
             except  Exception as e:
                 pass 
@@ -412,11 +416,19 @@ class Flexistack():
                             del module
                             continue
                         action = module.Action(None)
-                        if not hasattr(action,'autoload'):
+                        if not hasattr(action,'_flexi_'):
                             del action, module
-                            continue  
-                        as_optional = action.autoload.get('as_optional')
-                        description = action.autoload.get('description')
+                            continue 
+                        autoload_structure = {"type":str, "description": str}
+                        if not all(key in action._flexi_ and isinstance(action._flexi_[key], value_type)
+                            for key, value_type in autoload_structure.items()):
+                            del action, module
+                            return  
+                        if action._flexi_.get("type") != "action":
+                            del action, module
+                            return                          
+                        as_optional = action._flexi_.get('as_optional')
+                        description = action._flexi_.get('description')
                         if description != None and as_optional == None and "set_optional_arguments" in list(module.Action.__dict__.keys()):
                             _app[command] = module
                             __subparser = _subparser.add_parser(command,help=description)
@@ -513,7 +525,7 @@ class Flexistack():
         except Exception as e: 
             print(e)
             return False
-        
+
 #########################################################################################
-# END OF FILE                                                                           #
+# EOF                                                                                   #
 #########################################################################################

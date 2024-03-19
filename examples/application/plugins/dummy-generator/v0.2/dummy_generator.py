@@ -25,18 +25,25 @@
 #########################################################################################
 
 #########################################################################################
-# CLASS
+# IMPORTS                                                                               #
+#########################################################################################
+
+#########################################################################################
+# SAFE-IMPORTS                                                                          #
+#########################################################################################
+
+#########################################################################################
+# CLASS                                                                                 #
 #########################################################################################
 
 class Plugin():
 
     # FlexiStack plugin details
     # required from autoloader
-    autoload = {
-        "name": "dummy-generator",
-        "version": "0.2",
-        "description": "This a better dummy data generator plugin"
-    }
+    _flexi_ = { 'type'          : 'plugin',
+                'name'          : "dummy-generator",
+                'version'       : "0.2",
+                'description'   : "This a better dummy data generator plugin" }    
 
     # Dynamically loaded modules 
     # Do not modify (auto-populated)
@@ -57,22 +64,22 @@ class Plugin():
             if len(self.req_plugins) == 0 or flexistack == None:
                 return
             if (set(self.req_plugins) - self.flexistack.plugins.keys()):
-                print(self.autoload['name']+" - [warn] missing required modules")
+                print(self.autoload['name']+" - [wrn] missing required modules")
         except:
-            print(self.autoload['name']+" - [error] module could not be initialized")
+            print(self.autoload['name']+" - [err] module could not be initialized")
 
     # ###################################################################################
-    # USER CODE SECTION 1 - START                                   
-    # Use this section to define properties
-    # ################################################################################### 
-
-    # ###################################################################################
-    # USER CODE SECTION 1 - END                                     
+    # USER CODE SECTION 1 - START                                                       #
+    # Use this section to define properties                                             #
     # ###################################################################################
 
     # ###################################################################################
-    # USER CODE SECTION 2 - START                                   
-    #      Use this section to define methods(functions)
+    # USER CODE SECTION 1 - END                                                         #
+    # ###################################################################################
+
+    # ###################################################################################
+    # USER CODE SECTION 2 - START                                                       #
+    #      Use this section to define methods(functions)                                #
     # ###################################################################################
 
     def init(self,**kargs):
@@ -85,6 +92,10 @@ class Plugin():
     def random_number(self,length):
         return self.flexistack.helper.generate_random_number(length)
     
-    # ##################################################################
-    # USER CODE SECTION 2 - END                                     
-    # ##################################################################                                   
+    # ###################################################################################
+    # USER CODE SECTION 2 - END                                                         #
+    # ###################################################################################
+
+#########################################################################################
+# EOF                                                                                   #
+#########################################################################################

@@ -40,7 +40,8 @@ if __name__=="__main__":
     fstack = flexistack.Flexistack()
 
     # Load actions and plugins
-    fstack.load(os.path.join(project_dir, "actions"), 
+    fstack.load(None,
+                os.path.join(project_dir, "actions"), 
                 os.path.join(project_dir, "plugins"))
 
     # Parse arguments

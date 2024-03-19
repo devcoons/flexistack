@@ -24,8 +24,10 @@
 #                                                                                       #
 #########################################################################################
 
+import inspect
 import os
 import sys
+from trace import CoverageResults
 import uuid
 import json
 import random
@@ -276,6 +278,7 @@ class Flexistack():
     uuid            = None
     actions         = {}
     plugins         = Plugins()
+    middleware      = type('', (), {})()
     parser          = None
     parsed_args     = None
 
@@ -333,6 +336,8 @@ class Flexistack():
             except  Exception as e:
                 pass 
 
+        if dir_paths == None:
+            return
         if isinstance(dir_paths,str):
             dir_paths = [dir_paths]
         if not isinstance(dir_paths,list):    
@@ -343,6 +348,40 @@ class Flexistack():
             for m_path in modules_paths:
                 _load(m_path)              
 
+    # --------------------------------------------------------------------------------- #
+
+    def load_middleware(self, dir_paths): 
+        """
+        Loads middleware from a specified directory and enlists them 
+        in the Flexistack middleware as properties.
+
+        Args:
+        - dir_paths: A string or list of strings representing the path(s) to the directory(ies) 
+          containing the middlewares to load.  
+        """      
+        def _load(module_full_path):  
+            try:    
+                module = SourceFileLoader("module_candidate", module_full_path).load_module()
+                classes = inspect.getmembers(module,inspect.isclass)
+                for class_name,_class in classes:
+                    if hasattr(_class,'fleximiddlew') and not hasattr(_class,'autoload'):
+                        _class(self.middleware)
+                del module
+            except  Exception as e:
+                pass 
+        
+        if dir_paths == None:
+            return
+        if isinstance(dir_paths,str):
+            dir_paths = [dir_paths]
+        if not isinstance(dir_paths,list):    
+             raise Exception("Error: Flexistack `dir_paths` required argument is not a type of list[str]")   
+        for dir_path in dir_paths:
+            dir_path = os.path.abspath(os.path.normpath(dir_path))          
+            modules_paths = [str(path) for path in list(Path(dir_path).rglob("*.py")) ]
+            for m_path in modules_paths:
+                _load(m_path) 
+                
     # --------------------------------------------------------------------------------- #
     
     def load_actions(self, dir_paths):  
@@ -396,6 +435,9 @@ class Flexistack():
                 raise Exception("Error: Flexistack `dir_paths` actions loading failed")
             return _app
 
+        if dir_paths == None:
+            return
+        
         subparsers  = self.parser.add_subparsers(title="Available actions", dest='action') 
         if isinstance(dir_paths,str):
             dir_paths = [dir_paths]
@@ -408,7 +450,8 @@ class Flexistack():
     
     # --------------------------------------------------------------------------------- #
 
-    def load(self, actions_dirs, plugins_dirs):
+    def load(self, middleware_dirs, actions_dirs, plugins_dirs):
+        self.load_middleware(middleware_dirs)
         self.load_plugins(plugins_dirs)
         self.load_actions(actions_dirs)
 

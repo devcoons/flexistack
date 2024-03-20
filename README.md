@@ -6,17 +6,26 @@
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/flexistack?style=for-the-badge&color=%23F0F)
 
 
-FlexiStack is a Python package designed to facilitate the rapid development of modular Python applications. This framework consists of two main entities: actions and plugins. Actions are user-performed tasks exposed as application arguments, while plugins are functional components that users can consume within their actions. It simplifies the complexity of argument parsing and supports multiple versions of plugins.
+FlexiStack is a sophisticated Python framework designed to streamline the development of modular applications. It allows developers to efficiently manage the complexity associated with building applications by segmenting functionality into distinct, reusable components. FlexiStack provides a structured approach to developing software, offering significant benefits:
 
-## Installation
+- <b>Modularity</b>: Promotes clean separation of concerns, enabling developers to organize code into manageable pieces.
+- <b>Reusability</b>: Components such as actions and plugins can be reused across different projects, reducing development time.
+- <b>Extensibility</b>: New functionalities can be easily added through plugins without altering the core application logic.
+- <b>Simplicity</b>: Simplifies argument parsing and command-line interface creation, making it easier to build and maintain complex applications.
+
+<b>Core Components of FlexiStack</b>
+
+FlexiStack's architecture is built around three main components: `middleware`, `actions`, and `plugins`. Each serves a unique purpose within the framework, contributing to its flexibility and power.
+
+# Installation
 
 You can install FlexiStack using pip:
 
 `pip install flexistack`
 
-## Getting Started
+# How to use
 
-Although FlexiStack supports various project structures, a recommended one is as follows:` 
+Although FlexiStack can support various project structures, a recommended one is as follows:
 
 ```
 /project_directory 
@@ -30,6 +39,7 @@ Although FlexiStack supports various project structures, a recommended one is as
 └── ...
 ```
 
+## Main Flexistack application
 
 A minimum setup in the `__main__.py` file to utilize FlexiStack:
 
@@ -58,126 +68,218 @@ if __name__ == "__main__":
     pass
 ```
 
-## Plugins in FlexiStack
+## Flexistack Middleware
 
-FlexiStack supports plugins, which are functional components that users can consume within their actions. Plugins enhance the capabilities of the framework by providing reusable functionality for various tasks. Here's how developers can work with plugins in FlexiStack:
+Middleware in FlexiStack serves as an intermediate layer that can process data or handle requests both before and after they reach the core action logic. Middleware can be employed for various purposes, such as logging, authentication, data preprocessing, or any other cross-cutting concern that should be applied consistently across different parts of your application.
 
-1.  **Create Plugin Classes**: Define Python classes for each plugin version within the `plugins` directory of your project. Each plugin class should contain methods for initialization and the functionality it provides.
-    
-2.  **Specify Plugin Details**: In each plugin class, define the `_flexi_` attribute with details about the plugin, such as its name, version, and description. This information helps FlexiStack manage and identify plugins effectively.
-    
-3.  **Implement Plugin Functionality**: Inside the plugin class, implement the functionality that the plugin offers. This could include data generation, external API integration, or any other task that the plugin is designed for.
-    
+FlexiStack utilizes the concept of middleware to provide a flexible way to insert these cross-cutting concerns without cluttering the business logic of actions and plugins. Middleware classes are automatically recognized and utilized by FlexiStack based on their structure and configuration.
+
+#### Implementing Middleware
+
+To implement middleware in FlexiStack, you define a Python class with specific attributes and methods. The class name is used automatically as a callable property within flexistack.middleware, making it readily available throughout your application. 
+
+The key elements of a middleware class are:
+- `class <name>`: The name of the class is used by the framework to access the functionalities of the middleware.
+- `_flexi_ (dictionary)`: describes the type of this class (middleware) and contains a short description of it.
+- `__init__ (method)`: Registers the middleware in the Flexistack framework.
+
+<b>Example: Terminal Middleware</b>
+
+```Python
+class Terminal:
+    # FlexiStack middleware descriptor
+    _flexi_ = {
+        'type': 'middleware',
+        'description': 'Handles terminal output operations'
+    }
+
+    def __init__(self, middleware):
+        # Register this middleware in the FlexiStack framework
+        setattr(middleware, self.__class__.__name__.lower(), self)
+        self.init()
+        
+    # ---------------------------------------------------------- #
+
+    def init(self):
+        # Optional: Initialization code here
+        pass
+
+    # Example method for middleware
+    def print(self, message):
+        print(message)
+```
+
+#### Using Middleware
+
+Once defined, middleware can be used throughout your application simply by accessing it through the flexistack.middleware property. For example, to use the Terminal middleware in an action to print a message, you would do the following:
+
+```Python
+def my_action_method(self):
+    self.flexistack.middleware.terminal.print("This is a message from an action using Terminal middleware.")
+```
+
+This approach to middleware allows FlexiStack applications to maintain clean separation of concerns and promotes the reuse of common functionalities across different parts of the application. By defining middleware like the Terminal example, developers can encapsulate specific behaviors (such as custom logging, output formatting, etc.) in a way that's easily accessible and reusable without coupling these behaviors to the core logic of actions or plugins.
+
+
+### Flexistack Actions
+
+Actions are central to FlexiStack's design, representing the tasks that your application can perform. They are defined as Python scripts and are categorized into two main types based on how they are invoked from the command line:
+
+- Positional Actions: These are converted into positional arguments. The framework dynamically constructs the command-line interface based on the action scripts' names and their directory structure. For instance, an action placed directly under the actions directory becomes a first-level positional argument, while an action inside a subdirectory (like generate/random-number.py) becomes a nested positional argument (generate random-number).
+- Optional Actions: These are used as optional arguments, typically providing utility functionalities such as displaying the version of the application.
+
+
+#### Key Elements of an Action
+The structure and behavior of actions are defined by several key elements:
+
+- `File Name`: Determines the argument name used to invoke the action from the command line.
+- `_flexi_ (dictionary)`: Contains metadata about the action, including its type and description.
+- `__init__ (method)`: Initializes the action, setting up any necessary state or dependencies.
+- `set_optional_arguments (method)`: Defines additional CLI arguments that the action accepts.
+- `init (method)`: Performs initial setup based on the provided command-line arguments.
+- `run (method)`: Contains the main logic to be executed when the action is invoked.
+
+
+#### Implementing Actions
+To implement an action, create a Python script in the actions directory or a subdirectory for nested actions. The script should define a class with the aforementioned key elements.
+
+#### Example: Positional Action
+
+```Python
+class Action:
+    _flexi_ = {
+        'type': 'action',
+        'description': 'Shuffles a given string'
+    }
+
+    def __init__(self, flexistack):
+        self.flexistack = flexistack
+
+    def set_optional_arguments(self, parser, modules):
+        parser.add_argument('--data', help="Input data to shuffle")
+
+    def init(self, **kwargs):
+        self.data = kwargs.get('data', None)
+        return True
+
+    def run(self, **kwargs):
+        # Logic to shuffle the data
+        pass
+```
+
+Example: Optional Action
+
+```Python
+class Action:
+    _flexi_ = {
+        'type': 'action',
+        'as_optional': 'store_true',
+        'description': 'Get application version'
+    }
+
+    def __init__(self, flexistack):
+        self.flexistack = flexistack
+
+    def init(self, **kwargs):
+        # Optional actions might not need additional initialization
+        return True
+
+    def run(self, **kwargs):
+        print("Application Version: 1.0.0")
+```
+
+#### Action Invocation and Structure
+
+The framework auto-generates the command-line interface based on the action scripts' names and their placement within the directory structure. This structure allows for intuitive and organized access to the various functionalities of your application.
+
+- A script named shuffle.py directly under actions is invoked as python app.py shuffle.
+- A script named random-number.py inside a subdirectory generate is invoked as python app.py generate random-number.
+
+<b>The `.flexistack` File</b>
+
+For actions grouped under a directory (like generate), a .flexistack file within the directory provides additional metadata for the grouped actions, such as the order in which they appear and a short description. This file enhances the CLI's usability by organizing related actions under a common command namespace.
+
+```
+{
+	"z-index": 105,
+	"description": "Generate different data"
+}
+```
+
+By carefully structuring actions and utilizing the .flexistack file for grouped actions, developers can create a rich, intuitive command-line interface for their applications using FlexiStack, enhancing both the development experience and the end user's interaction with the application.
+
+
+## Flexistack Plugins
+
+Plugins in FlexiStack are reusable components that extend the functionality of actions. They can be invoked by actions to perform specific tasks, such as generating data, interacting with databases, or integrating with external services. A notable feature of FlexiStack's plugin system is its support for versioning, allowing multiple versions of a plugin to coexist. This ensures that improvements or changes can be made to plugins without breaking existing functionality that depends on earlier versions.
+
+
+
+### Key Elements of a Plugin
+- flexi Dictionary: Contains metadata about the plugin, including its type, name, version, and description. This information is crucial for the framework to manage and utilize the plugin correctly.
+- Multiple Versions: Plugins can have multiple versions, each residing in its directory under the plugin's main directory. The version is specified in the _flexi_ dictionary and the directory name.
+- Plugin Methods: Define the functionality offered by the plugin. These methods can be called by actions to perform tasks.
 
 ### Plugin Versioning
 
 FlexiStack supports multiple versions of plugins, allowing developers to introduce enhancements or fixes without breaking existing functionality. Plugin versioning follows a structured approach, where each version is identified by a version number (e.g., `0.1`, `0.2`, etc.). When loading plugins, FlexiStack automatically selects the latest version available.
 
-### Example
+### Implementing a Plugin
 
-Suppose you want to create a plugin called `data-generator` for generating random data. Here's how you can do it:
+To implement a plugin, create a directory under the plugins directory of your application, named after the plugin. Within this directory, create subdirectories for each version of the plugin, containing a Python script that defines the plugin's functionality.
 
-1.  **Define Plugin Class**: Create a new Python file named `data_generator.py` within the `plugins` directory of your project.
-    
-2.  **Specify Plugin Details**: Inside `data_generator.py`, define a class named `Plugin` and specify the plugin details using the `_flexi_` attribute. For example:
-    
-```Python
-class Plugin:
-        _flexi_ = {
-            "type": "plugin",
-            "name": "data-generator",
-            "version": "0.1",
-            "description": "Plugin for generating random data"
-        }
-```
-
-3.  **Implement Plugin Functionality**: Add methods to the `Plugin` class for initialization and the functionality it provides. For instance:
-   
+#### Example: Dummy Data Generator Plugin (v0.2)
 
 ```Python
 class Plugin:
-        _flexi_ = {
-            "type": "plugin",
-            "name": "data-generator",
-            "version": "0.1",
-            "description": "Plugin for generating random data"
-        }
-    
-        def init(self, **kargs):
-            # Initialization logic
-            pass
-    
-        def generate_random_data(self):
-            # Functionality to generate random data
-            pass           
+    _flexi_ = {
+        'type': 'plugin',
+        'name': 'dummy-generator',
+        'version': '0.2',
+        'description': 'Generates dummy data for testing purposes'
+    }
+
+    def __init__(self, flexistack=None):
+        self.flexistack = flexistack
+
+    def random_string(self, length):
+        # Example method to generate a random string
+        return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 ```
 
-By following this approach, you can effectively integrate plugins into your FlexiStack-based application, extending its functionality and enhancing its capabilities as needed.
 
-## Actions in FlexiStack
+### Using a Plugin within an Action
 
-Actions in FlexiStack are user-performed tasks exposed as application arguments. They allow developers to define specific functionality that users can invoke from the command line. Here's how developers can create and use actions in FlexiStack:
+Actions as well as other plugins can utilize plugins by accessing them through the flexistack.plugins property. The framework ensures that actions can easily call upon plugin functionality while respecting versioning requirements.
 
-1.  **Create Action Classes**: Define Python classes for each action within the `actions` directory of your project. Each action class should contain methods for initialization and the functionality it provides.
-    
-2.  **Specify Action Details**: In each action class, define the `autoload` attribute with details about the action, such as its description. This information helps FlexiStack manage and identify actions effectively.
-    
-3.  **Implement Action Functionality**: Inside the action class, implement the functionality that the action offers. This could include data manipulation, file operations, or any other task that the action is designed for.
-    
-
-### Example
-
-Suppose you want to create an action called `shuffle` for shuffling a given string. Here's how you can do it:
-
-1.  **Define Action Class**: Create a new Python file named `shuffle.py` within the `actions` directory of your project.
-    
-2.  **Specify Action Details**: Inside `shuffle.py`, define a class named `Action` and specify the action details using the `_flexi_` attribute. For example:
-    
-```Python
-   class Action:
-        _flexi_ = {
-            "type": "action",
-            "description": 'Shuffle a given string'
-        }
-```
-    
-3.  **Implement Action Functionality**: Add methods to the `Action` class for initialization and the functionality it provides. For instance:
-    
+#### Example: Generating a Random String in an Action
 
 ```Python
 class Action:
-        _flexi_ = {
-            "type": "action",
-            "description": 'Shuffle a given string'
-        }
-    
-        def init(self, **kargs):
-            # Initialization logic
-            pass
-    
-        def run(self, **kargs):
-            # Functionality to shuffle the string
-            pass
+    _flexi_ = {
+        'type': 'action',
+        'description': 'Generates a random string'
+    }
+
+    def __init__(self, flexistack):
+        self.flexistack = flexistack
+
+    def set_optional_arguments(self, parser, modules):
+        parser.add_argument('-l', '--length', type=int, help="Length of the random string")
+
+    def init(self, **kwargs):
+        self.length = kwargs.get('length', 10)  # Default length is 10
+        return True
+
+  def run(self, **kwargs):
+        # Accessing the latest version of the dummy-generator plugin
+        dummy_generator = self.flexistack.plugins['dummy-generator'].latest(self.flexistack)
+        random_string = dummy_generator.random_string(self.length)
+        print(f"Generated Random String: {random_string}")
+
 ```
 
-### Calling Plugins in Your Code
-
-Once you've defined a plugin, you can call its functionality from your actions. Here's how to do it:
-
-1.  **Loading Plugins**: In your main application code, load the plugins using the `load` method of the FlexiStack framework.
-    
-2.  **Accessing Plugin Functionality**: Once loaded, you can access the functionality provided by a plugin by instantiating the plugin class and calling its methods. For example:
-    
-    
-```Python
-    # Access plugin functionality
-    data_generator_plugin = fstack.plugins['data-generator'].latest(fstack)
-    random_data = data_generator_plugin.generate_random_data()
-```  
-
-## Significance of .flexistack file in actions
-
-The `.flexistack` file is a configuration file used by FlexiStack to provide additional metadata about actions. This metadata includes information such as the index of the actions family in the command-line argument list and a description of the actions family. By including this file in the actions directory, developers can enhance the usability of their applications by providing more context about each actions family.  
+In this example, the action generates a random string by utilizing the dummy-generator plugin. It specifies the length of the string through an optional argument. The action calls the random_string method of the latest version of the dummy-generator plugin, demonstrating how FlexiStack facilitates the interaction between actions and plugins while leveraging plugin versioning to ensure compatibility and flexibility.
 
 ## Conclusion
 

@@ -1,6 +1,5 @@
-from .flexistack import Flexistack, safe_import
-from .helper import Helper
+from .flexistack import Flexistack, flexi_action, flexi_middleware, flexi_plugin, safe_import
 
-__version__ = '0.1.8'
-__name__ = "flexistack"
-__all__ = ['Flexistack',"Helper",'safe_import']
+__version__     = '0.1.9'
+__name__        = "flexistack"
+__all__         = ['Flexistack', 'flexi_action', 'flexi_middleware', 'flexi_plugin', 'safe_import']

@@ -101,11 +101,12 @@ class Plugin:
     """
     m = None
     d = None
-
+    c = None
+    
     # --------------------------------------------------------------------------------- #
     # --------------------------------------------------------------------------------- #
 
-    def __init__(self, m, d):
+    def __init__(self, m, d, c):
         """
         Constructor method for the Module class.
 
@@ -115,6 +116,7 @@ class Plugin:
         """
         self.m = m
         self.d = d
+        self.c = c
 
     # --------------------------------------------------------------------------------- #
         
@@ -126,7 +128,7 @@ class Plugin:
         Returns:
         - The loaded module object.
         """
-        return self.m.Plugin(flexistack) if flexistack != None else self.m
+        return getattr(self.m,self.c)(flexistack) if flexistack != None else self.m
 
 #########################################################################################
 # CLASS                                                                                 #
@@ -142,6 +144,14 @@ class PluginPack(dict):
         Constructor method for the ModulePack class.
         """
         pass
+
+    # --------------------------------------------------------------------------------- #
+
+    def __call__(self, flexistack = None):
+        """
+        Constructor method for the ModulePack class.
+        """
+        return self.latest(flexistack=flexistack)
 
     # --------------------------------------------------------------------------------- #
 
@@ -310,35 +320,29 @@ class Flexistack():
           containing the plugins to load.  
         """  
         def _load(module_full_path):  
-            try:    
+            try:                     
                 module = SourceFileLoader("module_candidate", module_full_path).load_module()
-                if not hasattr(module,'Plugin'):
-                    del module
-                    return
-                plugin = module.Plugin(None)
-                if not hasattr(plugin,'_flexi_'):
-                    del plugin, module
-                    return     
-                autoload_structure = {"type":str, "name": str, "description": str, "version": str}
-                if not all(key in plugin._flexi_ and isinstance(plugin._flexi_[key], value_type)
-                    for key, value_type in autoload_structure.items()):
-                    del plugin, module
-                    return  
-                if plugin._flexi_.get("type") != "plugin":
-                    del plugin, module
-                    return                    
-                p_name = plugin._flexi_['name']
-                p_vers = plugin._flexi_['version']
-                p_desc = plugin._flexi_['description']
-                module_rnd = ''.join(random.choices(string.ascii_letters + string.digits, k=5))
-                if self.plugins.get(p_name) is None:
-                    self.plugins[p_name] = PluginPack()  
-                self.plugins[p_name][p_vers] = Plugin(SourceFileLoader( p_name + "v" \
-                                     + str(p_vers) \
-                                     + "_" + module_rnd, module_full_path).load_module(), p_desc)
+                for class_name,_class in inspect.getmembers(module,inspect.isclass):
+                    if hasattr(_class,'_flexi_'):
+                        if _class._flexi_.get('type') == "plugin":                
+                            autoload_structure = {"type":str, "name": str, "description": str, "version": str}
+                            if not all(key in  _class._flexi_ and isinstance(_class._flexi_[key], value_type)
+                                for key, value_type in autoload_structure.items()):
+                                continue                   
+                            p_name = _class._flexi_['name']
+                            p_vers = _class._flexi_['version']
+                            p_desc = _class._flexi_['description']
+                            module_rnd = ''.join(random.choices(string.ascii_letters + string.digits, k=5))
+                            if self.plugins.get(p_name) is None:
+                                self.plugins[p_name] = PluginPack()  
+                            self.plugins[p_name][p_vers] = Plugin(SourceFileLoader( p_name + "v" \
+                                                 + str(p_vers) \
+                                                 + "_" + module_rnd, module_full_path).load_module(), p_desc,class_name)   
             except  Exception as e:
                 pass 
-
+            if 'module_candidate' in sys.modules:
+                del sys.modules['module_candidate']
+                
         if dir_paths == None:
             return
         if isinstance(dir_paths,str):
@@ -373,7 +377,9 @@ class Flexistack():
                 del module
             except  Exception as e:
                 pass 
-        
+            if 'module_candidate' in sys.modules:
+                del sys.modules['module_candidate']
+                
         if dir_paths == None:
             return
         if isinstance(dir_paths,str):
@@ -525,6 +531,87 @@ class Flexistack():
         except Exception as e: 
             print(e)
             return False
+
+
+#########################################################################################
+# CLASS DECORATOR                                                                       #
+######################################################################################### 
+
+def flexi_action(as_optional, description):
+    
+    def class_decorator(cls):
+        cls._flexi_ = {'type':'action',
+                       'as_optional' : as_optional,
+                       'description':description}      
+
+        def action_init(self, flexistack=None):
+            self.basename = os.path.basename(sys.modules[cls.__module__].__file__)
+            self.flexistack = flexistack 
+            try:
+                if hasattr(self, 'req_plugins'):
+                    if self.flexistack != None and self.req_plugins != None:
+                        if len(self.req_plugins) == 0:
+                            return
+                        if (set(self.req_plugins) - self.flexistack.plugins.keys()):
+                            print(str(self.__class__)+" - [warn] missing required plugins")
+            except:
+                print(str(self.__class__)+" - [warn] plugins could not be loaded")        
+        
+        cls.__init__ = action_init
+        return cls
+ 
+    return class_decorator
+
+#########################################################################################
+# CLASS DECORATOR                                                                       #
+######################################################################################### 
+
+def flexi_middleware(description):
+    
+    def class_decorator(cls):
+        cls._flexi_ = {'type':'middleware',
+                       'description':description}      
+
+        def middleware_init(self, middleware):
+            self.basename = os.path.basename(sys.modules[cls.__module__].__file__)
+            setattr(middleware, self.__class__.__name__.lower(), self)
+            if hasattr(self, 'init'):
+                self.init()       
+        
+        cls.__init__ = middleware_init
+        return cls
+ 
+    return class_decorator
+
+#########################################################################################
+# CLASS DECORATOR                                                                       #
+#########################################################################################         
+   
+def flexi_plugin(name,version,description):
+    
+    def class_decorator(cls):
+        cls._flexi_ = {'type':'plugin',
+                       'name': name,
+                       'version':version,
+                       'description':description}      
+
+        def plugin_init(self, flexistack=None):
+            self.basename = os.path.basename(sys.modules[cls.__module__].__file__)
+            self.flexistack = flexistack 
+            try:
+                if hasattr(self, 'req_plugins'):
+                    if self.flexistack != None and self.req_plugins != None:
+                        if len(self.req_plugins) == 0:
+                            return
+                        if (set(self.req_plugins) - self.flexistack.plugins.keys()):
+                            print(str(self.__class__)+" - [warn] missing required plugins")
+            except:
+                print(str(self.__class__)+" - [warn] plugins could not be loaded")        
+        
+        cls.__init__ = plugin_init
+        return cls
+ 
+    return class_decorator
 
 #########################################################################################
 # EOF                                                                                   #

@@ -36,7 +36,7 @@ import time
 import string
 import datetime
 from threading import Lock
-from flexistack import safe_import
+from flexistack import *
 
 #########################################################################################
 # SAFE-IMPORTS                                                                          #
@@ -49,20 +49,9 @@ from colorama import just_fix_windows_console
 # CLASS                                                                                 #
 #########################################################################################
 
+@flexi_middleware(description="Simple colorful terminal")
 class Terminal:
-    
-    # FlexiStack middleware details required by the framework
-    _flexi_ = { 'type'           : "middleware", 
-                'description'    : "" }
-    
-    # Constructor
-    #   Only core operations to ensure that the current module
-    #   is set as a property in framework's middleware
-    def __init__(self, middleware):
-        setattr(middleware, self.__class__.__name__.lower(), self)
-        if hasattr(self, 'init'):
-            self.init()
-        
+            
     # ###################################################################################
     # USER CODE SECTION 1 - START                                                       #
     # Use this section to define properties                                             #

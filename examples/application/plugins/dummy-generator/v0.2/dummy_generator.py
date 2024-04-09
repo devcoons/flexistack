@@ -28,6 +28,8 @@
 # IMPORTS                                                                               #
 #########################################################################################
 
+from flexistack import *
+
 #########################################################################################
 # SAFE-IMPORTS                                                                          #
 #########################################################################################
@@ -36,37 +38,8 @@
 # CLASS                                                                                 #
 #########################################################################################
 
+@flexi_plugin("dummy-generator", '0.2', "This a better dummy data generator plugin")
 class Plugin():
-
-    # FlexiStack plugin details
-    # required from autoloader
-    _flexi_ = { 'type'          : 'plugin',
-                'name'          : "dummy-generator",
-                'version'       : "0.2",
-                'description'   : "This a better dummy data generator plugin" }    
-
-    # Dynamically loaded modules 
-    # Do not modify (auto-populated)
-    flexistack = None
-
-    # Required modules list 
-    #   Modify this list according to the
-    #   needs of this module
-    req_plugins = []
-
-    # Constructor
-    #   Only core operations to ensure that
-    #   the current module has all the
-    #   dependencies
-    def __init__(self, flexistack = None):
-        try:        
-            self.flexistack = flexistack
-            if len(self.req_plugins) == 0 or flexistack == None:
-                return
-            if (set(self.req_plugins) - self.flexistack.plugins.keys()):
-                print(self.autoload['name']+" - [wrn] missing required modules")
-        except:
-            print(self.autoload['name']+" - [err] module could not be initialized")
 
     # ###################################################################################
     # USER CODE SECTION 1 - START                                                       #

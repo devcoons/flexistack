@@ -28,19 +28,11 @@
 # IMPORTS                                                                               #
 #########################################################################################
 
-import os
-import sys
-import copy
-import time
-import json
-import datetime
-import importlib
-import subprocess
-import argparse
-
 from os import listdir
 from os.path import abspath, dirname, isfile, join
 from genericpath import isdir
+
+from flexistack import *
 
 #########################################################################################
 # SAFE-IMPORTS                                                                          #
@@ -50,32 +42,8 @@ from genericpath import isdir
 # CLASS                                                                                 #
 #########################################################################################
 
+@flexi_action('store_true', 'Get application version')
 class Action:
-
-    # FlexiStack action details
-    # required from autoloader
-    _flexi_ = { 'type'           : 'action', 
-                'as_optional'    : 'store_true',
-                'description'    : 'Get application version'}
-
-    # Dynamically loaded modules 
-    # Do not modify (auto-populated)
-    flexistack = None
-
-    # Required modules list 
-    #   Modify this list according to the
-    #   need of this module
-    req_plugins = []
-
-    def __init__(self, flexistack):
-        try:
-            self.flexistack = flexistack
-            if len(self.req_plugins) == 0 or flexistack == None:
-                return
-            if (set(self.req_plugins) - self.flexistack.plugins.keys()):
-                print(str(self.__class__)+" - [wrn] missing required modules")
-        except:
-            print(str(self.__class__)+" - [err] action could not be loaded")
 
     # ###################################################################################
     # USER CODE SECTION 1 - START                                                       #

@@ -28,6 +28,8 @@
 # IMPORTS                                                                               #
 #########################################################################################
 
+from flexistack import *
+
 #########################################################################################
 # SAFE-IMPORTS                                                                          #
 #########################################################################################
@@ -36,32 +38,8 @@
 # CLASS                                                                                 #
 #########################################################################################
 
+@flexi_action(None, 'Generate a random number')
 class Action:
-
-    # FlexiStack action details
-    # required from autoloader
-    _flexi_ = { 'type'           : 'action', 
-                'as_optional'    : None,
-                'description'    : 'Generate a random number'}    
-
-    # Dynamically loaded modules 
-    # Do not modify (auto-populated)
-    flexistack = None
-
-    # Required modules list 
-    #   Modify this list according to the
-    #   need of this module
-    req_plugins = []
-
-    def __init__(self, flexistack):
-        try:
-            self.flexistack = flexistack
-            if len(self.req_plugins) == 0 or flexistack == None:
-                return
-            if (set(self.req_plugins) - self.flexistack.plugins.keys()):
-                print(str(self.__class__)+" - [wrn] missing required modules")
-        except:
-            print(str(self.__class__)+" - [err] action could not be loaded")
 
     # ###################################################################################
     # USER CODE SECTION 1 - START                                                       #

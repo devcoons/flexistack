@@ -29,6 +29,7 @@
 #########################################################################################
 
 import random
+from flexistack import *
 
 #########################################################################################
 # SAFE-IMPORTS                                                                          #
@@ -38,32 +39,8 @@ import random
 # CLASS                                                                                 #
 #########################################################################################
 
+@flexi_action(None, 'Shuffle a given string')
 class Action:
-
-    # FlexiStack action details
-    # required from autoloader
-    _flexi_ = { 'type'           : 'action', 
-                'as_optional'    : None,
-                'description'    : 'Shuffle a given string'}
-
-    # Dynamically loaded modules 
-    # Do not modify (auto-populated)
-    flexistack = None
-
-    # Required modules list 
-    #   Modify this list according to the
-    #   need of this module
-    req_plugins = []
-
-    def __init__(self, flexistack):
-        try:
-            self.flexistack = flexistack
-            if len(self.req_plugins) == 0 or flexistack == None:
-                return
-            if (set(self.req_plugins) - self.flexistack.plugins.keys()):
-                print(str(self.__class__)+" - [wrn] missing required modules")
-        except:
-            print(str(self.__class__)+" - [err] action could not be loaded")
 
     # ###################################################################################
     # USER CODE SECTION 1 - START                                                       #

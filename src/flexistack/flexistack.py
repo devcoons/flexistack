@@ -284,7 +284,7 @@ class Flexistack():
     A dictionary-like class that loads modules from a specified 
     directory and caches them for future use.
     """
-
+    project_dir     = None
     uuid            = None
     actions         = {}
     plugins         = Plugins()
@@ -295,12 +295,20 @@ class Flexistack():
     # --------------------------------------------------------------------------------- #
     # --------------------------------------------------------------------------------- #
 
-    def __init__(self):
+    def __init__(self, project_dir = None):
         """
         Constructor method for the Autoloader class.
         """
-        self.uuid = uuid.uuid4().hex
-        self.parser    = argparse.ArgumentParser()
+        self.uuid   = uuid.uuid4().hex
+        self.parser = argparse.ArgumentParser()
+
+        if project_dir == None:
+            try:
+                self.project_dir = os.path.dirname(inspect.stack()[1].filename)
+            except:
+                self.project_dir = os.getcwd()
+        else:
+            self.project_dir = os.path.abspath(os.path.normpath(project_dir))
 
     # --------------------------------------------------------------------------------- #
 
@@ -532,7 +540,23 @@ class Flexistack():
             print(e)
             return False
 
+    # --------------------------------------------------------------------------------- #
+    # --------------------------------------------------------------------------------- #
 
+    def get_filepath(self, path, project_dir = None):
+        _project_dir = project_dir if project_dir != None else self.project_dir
+        if path.startswith("::"):
+            path = path[2:]
+            path = path[1:] if path.startswith("/") else path
+            path = path[1:] if path.startswith("\\") else path
+            return Helper.resolve_path(os.path.normpath(os.path.join(os.getcwd(),path)))
+        if path.startswith(":"):
+            path = path[1:]
+            path = path[1:] if path.startswith("/") else path
+            path = path[1:] if path.startswith("\\") else path
+            return Helper.resolve_path(os.path.normpath(os.path.join(_project_dir,path)))
+        return Helper.resolve_path(os.path.normpath(path))
+        
 #########################################################################################
 # CLASS DECORATOR                                                                       #
 ######################################################################################### 

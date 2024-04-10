@@ -543,19 +543,24 @@ class Flexistack():
     # --------------------------------------------------------------------------------- #
     # --------------------------------------------------------------------------------- #
 
-    def get_filepath(self, path, project_dir = None):
+    def get_filepath(self, paths, project_dir = None):
+        _results = []
         _project_dir = project_dir if project_dir != None else self.project_dir
-        if path.startswith("::"):
-            path = path[2:]
-            path = path[1:] if path.startswith("/") else path
-            path = path[1:] if path.startswith("\\") else path
-            return Helper.resolve_path(os.path.normpath(os.path.join(os.getcwd(),path)))
-        if path.startswith(":"):
-            path = path[1:]
-            path = path[1:] if path.startswith("/") else path
-            path = path[1:] if path.startswith("\\") else path
-            return Helper.resolve_path(os.path.normpath(os.path.join(_project_dir,path)))
-        return Helper.resolve_path(os.path.normpath(path))
+        _paths = [paths] if isinstance(paths,string) else paths
+        for path in _paths:
+            if path.startswith("::"):
+                path = path[2:]
+                path = path[1:] if path.startswith("/") else path
+                path = path[1:] if path.startswith("\\") else path
+                _results.append(Helper.resolve_path(os.path.normpath(os.path.join(os.getcwd(),path))))
+            elif path.startswith(":"):
+                path = path[1:]
+                path = path[1:] if path.startswith("/") else path
+                path = path[1:] if path.startswith("\\") else path
+                _results.append(Helper.resolve_path(os.path.normpath(os.path.join(_project_dir,path))))
+            else:
+                _results.append(Helper.resolve_path(os.path.normpath(path)))
+        return _results[0] if isinstance(paths,string) else _results
         
 #########################################################################################
 # CLASS DECORATOR                                                                       #

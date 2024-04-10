@@ -69,8 +69,8 @@ def safe_import(package: str, version: str = None, package_as: str = None) -> No
         if version is None:
             importlib.import_module(package)
         else:
-            import pkg_resources
-            _version = pkg_resources.get_distribution(package).version
+            import importlib.metadata
+            _version = importlib.metadata.version(package)
             if version == _version:
                 importlib.import_module(package)
             else:

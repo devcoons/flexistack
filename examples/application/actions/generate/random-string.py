@@ -78,7 +78,7 @@ class Action:
     # --------------------------------------------------------------------------------- #
 
     def run(self,**kargs):
-        dummy_generator = self.flexistack.plugins['dummy-generator'].latest(self.flexistack)
+        dummy_generator = self.flexistack.plugins['dummy-generator']['0.1']()
         print(dummy_generator.random_string(self.length))
         return True
 

@@ -47,23 +47,19 @@ A minimum setup in the `__main__.py` file to utilize FlexiStack:
 import os
 import flexistack
 
-project_dir = os.path.dirname(__file__)
-
 if __name__ == "__main__":
    
     # Create an instance of the Flexistack framework
     fstack = flexistack.Flexistack()
 
-    # Load middleware, actions and plugins
-    fstack.load(os.path.join(project_dir, "core"),
-                os.path.join(project_dir, "actions"), 
-                os.path.join(project_dir, "plugins"))
+    # Load actions and plugins
+    fstack.load(":core/", ":actions/",":plugins/")
 
     # Parse arguments
     _, unknown_args = fstack.parse_arguments()
 
     # Execute actions/plugins based on given args
-    fstack.run(project_dir)
+    fstack.run()
     
     pass
 ```
@@ -76,29 +72,18 @@ FlexiStack utilizes the concept of middleware to provide a flexible way to inser
 
 #### Implementing Middleware
 
-To implement middleware in FlexiStack, you define a Python class with specific attributes and methods. The class name is used automatically as a callable property within flexistack.middleware, making it readily available throughout your application. 
+To implement middleware in FlexiStack, you have to define a Python class with the appropriate flexi decorator `flexi_middleware`. The class name is used automatically as a callable property within `flexistack.middleware`, making it readily available throughout your application. 
 
 The key elements of a middleware class are:
 - `class <name>`: The name of the class is used by the framework to access the functionalities of the middleware.
-- `_flexi_ (dictionary)`: describes the type of this class (middleware) and contains a short description of it.
-- `__init__ (method)`: Registers the middleware in the Flexistack framework.
+- `@flexi_middleware (decorator)`: describes the type of this class (middleware) and contains a short description of it.
+- `init (method)`: Your init code (it is called automatically by the framework (once)).
 
 <b>Example: Terminal Middleware</b>
 
 ```Python
+@flexi_middleware(description="Simple colorful terminal")
 class Terminal:
-    # FlexiStack middleware descriptor
-    _flexi_ = {
-        'type': 'middleware',
-        'description': 'Handles terminal output operations'
-    }
-
-    def __init__(self, middleware):
-        # Register this middleware in the FlexiStack framework
-        setattr(middleware, self.__class__.__name__.lower(), self)
-        self.init()
-        
-    # ---------------------------------------------------------- #
 
     def init(self):
         # Optional: Initialization code here
@@ -114,8 +99,7 @@ class Terminal:
 Once defined, middleware can be used throughout your application simply by accessing it through the flexistack.middleware property. For example, to use the Terminal middleware in an action to print a message, you would do the following:
 
 ```Python
-def my_action_method(self):
-    self.flexistack.middleware.terminal.print("This is a message from an action using Terminal middleware.")
+self.flexistack.middleware.terminal.print("This is a message from an action using Terminal middleware.")
 ```
 
 This approach to middleware allows FlexiStack applications to maintain clean separation of concerns and promotes the reuse of common functionalities across different parts of the application. By defining middleware like the Terminal example, developers can encapsulate specific behaviors (such as custom logging, output formatting, etc.) in a way that's easily accessible and reusable without coupling these behaviors to the core logic of actions or plugins.
@@ -128,32 +112,22 @@ Actions are central to FlexiStack's design, representing the tasks that your app
 - Positional Actions: These are converted into positional arguments. The framework dynamically constructs the command-line interface based on the action scripts' names and their directory structure. For instance, an action placed directly under the actions directory becomes a first-level positional argument, while an action inside a subdirectory (like generate/random-number.py) becomes a nested positional argument (generate random-number).
 - Optional Actions: These are used as optional arguments, typically providing utility functionalities such as displaying the version of the application.
 
+#### Implementing Actions
+To implement an action, create a Python script in the `/actions` directory or a subdirectory for nesting. The script should define a class with the aforementioned key elements.
 
-#### Key Elements of an Action
 The structure and behavior of actions are defined by several key elements:
 
 - `File Name`: Determines the argument name used to invoke the action from the command line.
-- `_flexi_ (dictionary)`: Contains metadata about the action, including its type and description.
-- `__init__ (method)`: Initializes the action, setting up any necessary state or dependencies.
+- `flexi_action (decorator)`: Contains metadata about the action, including its type and description.
 - `set_optional_arguments (method)`: Defines additional CLI arguments that the action accepts.
 - `init (method)`: Performs initial setup based on the provided command-line arguments.
 - `run (method)`: Contains the main logic to be executed when the action is invoked.
 
-
-#### Implementing Actions
-To implement an action, create a Python script in the actions directory or a subdirectory for nested actions. The script should define a class with the aforementioned key elements.
-
 #### Example: Positional Action
 
 ```Python
+@flexi_action(type=None, description='Shuffle a given string')
 class Action:
-    _flexi_ = {
-        'type': 'action',
-        'description': 'Shuffles a given string'
-    }
-
-    def __init__(self, flexistack):
-        self.flexistack = flexistack
 
     def set_optional_arguments(self, parser, modules):
         parser.add_argument('--data', help="Input data to shuffle")
@@ -167,21 +141,13 @@ class Action:
         pass
 ```
 
-Example: Optional Action
+#### Example: Optional Action
 
 ```Python
+@flexi_action(type='store_true', description='Shuffle a given string')
 class Action:
-    _flexi_ = {
-        'type': 'action',
-        'as_optional': 'store_true',
-        'description': 'Get application version'
-    }
-
-    def __init__(self, flexistack):
-        self.flexistack = flexistack
 
     def init(self, **kwargs):
-        # Optional actions might not need additional initialization
         return True
 
     def run(self, **kwargs):
@@ -214,11 +180,13 @@ By carefully structuring actions and utilizing the .flexistack file for grouped 
 Plugins in FlexiStack are reusable components that extend the functionality of actions. They can be invoked by actions to perform specific tasks, such as generating data, interacting with databases, or integrating with external services. A notable feature of FlexiStack's plugin system is its support for versioning, allowing multiple versions of a plugin to coexist. This ensures that improvements or changes can be made to plugins without breaking existing functionality that depends on earlier versions.
 
 
-
 ### Key Elements of a Plugin
-- flexi Dictionary: Contains metadata about the plugin, including its type, name, version, and description. This information is crucial for the framework to manage and utilize the plugin correctly.
-- Multiple Versions: Plugins can have multiple versions, each residing in its directory under the plugin's main directory. The version is specified in the _flexi_ dictionary and the directory name.
-- Plugin Methods: Define the functionality offered by the plugin. These methods can be called by actions to perform tasks.
+
+- `File Name`: Determines the argument name used to invoke the action from the command line.
+- `flexi_plugin (decorator)`: Contains metadata about the plugin, including its name, version and description. This information is crucial for the framework to manage and utilize the plugin correctly.
+- `Multiple Versions`: Plugins can have multiple versions, each residing in its own directory under the plugin's main directory. The version is specified in the `flexi_plugin` decorator
+- `init (method-optional)`: Performs initial setup based on the provided command-line arguments.
+- `run (method-optional)`: Contains the main logic to be executed when the action is invoked.
 
 ### Plugin Versioning
 
@@ -231,16 +199,12 @@ To implement a plugin, create a directory under the plugins directory of your ap
 #### Example: Dummy Data Generator Plugin (v0.2)
 
 ```Python
+@flexi_plugin("dummy-generator", '0.2', "A plugin to generate dummy data for testing purposes")
 class Plugin:
-    _flexi_ = {
-        'type': 'plugin',
-        'name': 'dummy-generator',
-        'version': '0.2',
-        'description': 'Generates dummy data for testing purposes'
-    }
 
-    def __init__(self, flexistack=None):
-        self.flexistack = flexistack
+    def init(self,**kargs):
+        print ("Dummy Data Generator Init")
+        pass
 
     def random_string(self, length):
         # Example method to generate a random string
@@ -255,25 +219,27 @@ Actions as well as other plugins can utilize plugins by accessing them through t
 #### Example: Generating a Random String in an Action
 
 ```Python
+@flexi_action(None, 'Generate a random string')
 class Action:
-    _flexi_ = {
-        'type': 'action',
-        'description': 'Generates a random string'
-    }
 
-    def __init__(self, flexistack):
-        self.flexistack = flexistack
+    length = None
 
     def set_optional_arguments(self, parser, modules):
         parser.add_argument('-l', '--length', type=int, help="Length of the random string")
 
-    def init(self, **kwargs):
-        self.length = kwargs.get('length', 10)  # Default length is 10
-        return True
+     def init(self,**kargs):
+        try:
+            args = kargs['pargs']
+            if ('length' in args):
+                self.length = int(args['length'])
+                return True
+        except:
+            pass
+        return False
 
   def run(self, **kwargs):
         # Accessing the latest version of the dummy-generator plugin
-        dummy_generator = self.flexistack.plugins['dummy-generator'].latest(self.flexistack)
+        dummy_generator = self.flexistack.plugins['dummy-generator']()
         random_string = dummy_generator.random_string(self.length)
         print(f"Generated Random String: {random_string}")
 

@@ -31,23 +31,19 @@ import flexistack
 # MAIN                                                                                 #
 #########################################################################################
 
-project_dir = os.path.dirname(__file__)
-
 if __name__=="__main__":
    
     # Create an instance of the Flexistack framework
     fstack = flexistack.Flexistack()
 
     # Load actions and plugins
-    fstack.load(os.path.join(project_dir, "core"),
-                os.path.join(project_dir, "actions"), 
-                os.path.join(project_dir, "plugins"))
+    fstack.load(":core/", ":actions/",":plugins/")
 
     # Parse arguments
     _, unknown_args = fstack.parse_arguments()
 
     # Execute actions/plugins based on given args
-    fstack.run(project_dir)
+    fstack.run()
     
     pass
 

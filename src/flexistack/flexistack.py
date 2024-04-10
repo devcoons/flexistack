@@ -372,7 +372,7 @@ class Flexistack():
         if not isinstance(dir_paths,list):    
              raise Exception("Error: Flexistack `dir_paths` required argument is not a type of list[str]")   
         for dir_path in dir_paths:
-            dir_path = os.path.abspath(os.path.normpath(dir_path))          
+            dir_path = self.get_filepath(dir_path)                    
             modules_paths = [str(path) for path in list(Path(dir_path).rglob("*.py")) ]
             for m_path in modules_paths:
                 self.dprint("[flexistack] - load_plugins() - start loading from file: "+ m_path)                
@@ -411,8 +411,8 @@ class Flexistack():
             dir_paths = [dir_paths]
         if not isinstance(dir_paths,list):    
              raise Exception("Error: Flexistack `dir_paths` required argument is not a type of list[str]")   
-        for dir_path in dir_paths:
-            dir_path = os.path.abspath(os.path.normpath(dir_path))          
+        for dir_path in dir_paths:     
+            dir_path = self.get_filepath(dir_path)         
             modules_paths = [str(path) for path in list(Path(dir_path).rglob("*.py")) ]
             for m_path in modules_paths:
                 self.dprint("[flexistack] - load_middleware() - start loading from file: "+ m_path)                
@@ -501,7 +501,7 @@ class Flexistack():
         if not isinstance(dir_paths,list):
              raise Exception("Error: Flexistack `dir_paths` required argument is not a type of list[str]")   
         for dir_path in dir_paths:
-            dir_path = os.path.abspath(os.path.normpath(dir_path)) 
+            dir_path = self.get_filepath(dir_path) 
             self.dprint("[flexistack] - load_actions() - start loading from path: "+ dir_path)                     
             self.actions.update(add_action({},dir_path, self.parser, subparsers))
         pass
@@ -530,7 +530,7 @@ class Flexistack():
 
     # --------------------------------------------------------------------------------- #
 
-    def run(self, project_dir, parsed_args = None):
+    def run(self, project_dir = None, parsed_args = None):
         """
         Executes actions based on parsed arguments and project directory.
 
@@ -542,6 +542,9 @@ class Flexistack():
         Returns:
             bool: True if action execution is successful, False otherwise.
         """
+        if project_dir == None:
+            project_dir = self.project_dir
+        
         if parsed_args == None:
             parsed_args = self.parsed_args
 

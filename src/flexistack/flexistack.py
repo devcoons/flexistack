@@ -136,7 +136,7 @@ class Plugin:
         - The loaded module object.
         """
         _flexistack = flexistack if flexistack != None else self.f        
-        return getattr(self.m,self.c)(flexistack) if as_module == False else self.m
+        return getattr(self.m,self.c)(_flexistack) if as_module == False else self.m
 
 #########################################################################################
 # CLASS                                                                                 #

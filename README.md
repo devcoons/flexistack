@@ -82,6 +82,8 @@ The key elements of a middleware class are:
 <b>Example: Terminal Middleware</b>
 
 ```Python
+from flexistack import *
+
 @flexi_middleware(description="Simple colorful terminal")
 class Terminal:
 
@@ -126,6 +128,8 @@ The structure and behavior of actions are defined by several key elements:
 #### Example: Positional Action
 
 ```Python
+from flexistack import *
+
 @flexi_action(type=None, description='Shuffle a given string')
 class Action:
 
@@ -144,6 +148,8 @@ class Action:
 #### Example: Optional Action
 
 ```Python
+from flexistack import *
+
 @flexi_action(type='store_true', description='Shuffle a given string')
 class Action:
 
@@ -199,6 +205,8 @@ To implement a plugin, create a directory under the plugins directory of your ap
 #### Example: Dummy Data Generator Plugin (v0.2)
 
 ```Python
+from flexistack import *
+
 @flexi_plugin("dummy-generator", '0.2', "A plugin to generate dummy data for testing purposes")
 class Plugin:
 
@@ -219,6 +227,8 @@ Actions as well as other plugins can utilize plugins by accessing them through t
 #### Example: Generating a Random String in an Action
 
 ```Python
+from flexistack import *
+
 @flexi_action(None, 'Generate a random string')
 class Action:
 

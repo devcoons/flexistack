@@ -130,7 +130,7 @@ The structure and behavior of actions are defined by several key elements:
 ```Python
 from flexistack import *
 
-@flexi_action(type=None, description='Shuffle a given string')
+@flexi_action(None, 'Shuffle a given string')
 class Action:
 
     def set_optional_arguments(self, parser, modules):
@@ -150,7 +150,7 @@ class Action:
 ```Python
 from flexistack import *
 
-@flexi_action(type='store_true', description='Shuffle a given string')
+@flexi_action('store_true', 'Shuffle a given string')
 class Action:
 
     def init(self, **kwargs):

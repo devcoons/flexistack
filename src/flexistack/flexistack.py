@@ -280,9 +280,26 @@ class Plugins(dict):
 
 class Flexistack():
     """
-    A dictionary-like class that loads modules from a specified 
-    directory and caches them for future use.
+    Main class for managing plugins, actions, middleware, and configuration storage.
+    
+    Attributes:
+        project_dir (str): The directory path where the project files are located. 
+            Defaults to the current working directory.
+        uuid (str): A unique identifier for this instance of Flexistack, generated upon initialization.
+        actions (dict): Stores available actions, allowing command-line invocation and execution 
+            of specific functions within the project.
+        plugins (Plugins): An instance of the Plugins class, acting as a container for 
+            various plugins loaded within the project.
+        middleware (object): A generic container object for middleware components. Middleware 
+            can be dynamically loaded and assigned as properties within this object.
+        debug (bool): Flag indicating whether debug mode is active. When True, additional 
+            debugging information is printed to the console.
+        console (Consolio): An instance of the Consolio class, used for printing 
+            progress and status updates to the console.
+        config_vault (ConfigVault): An instance of the ConfigVault class, used to securely store 
+            and retrieve configuration data within the project.
     """
+
     project_dir     = None
     uuid            = None
     actions         = {}
@@ -292,7 +309,8 @@ class Flexistack():
     parsed_args     = None
     debug           = False    
     console         = None
-
+    config_vault    = None
+    
     # --------------------------------------------------------------------------------- #
     # --------------------------------------------------------------------------------- #
 
@@ -300,36 +318,40 @@ class Flexistack():
         """
         Constructor method for the Autoloader class.
         """
-        self.debug = debug         
+        self.debug = debug
+        self.console = Consolio(spinner_type='dots')
+        self.dprint(0,"inf","Flexistack:init()")
         self.uuid   = uuid.uuid4().hex
+        self.dprint(1,"cmp","uuid: "+ self.uuid)
         self.parser = argparse.ArgumentParser()
-        self.console = Consolio(spinner_type='dots') 
-        self.dprint("[flexistack] - init() - uuid: "+ self.uuid)
         if project_dir == None:
-            self.dprint("[flexistack] - init() - project_dir not given")                        
+            self.dprint(1,"wrn","project_dir: not given")                        
             try:
                 self.project_dir = os.path.dirname(inspect.stack()[1].filename)
             except:
                 self.project_dir = os.getcwd()
         else:
             self.project_dir = os.path.abspath(os.path.normpath(project_dir))
-        self.dprint("[flexistack] - init() - project_dir: "+ self.project_dir) 
+        self.dprint(1,"cmp","project_dir: "+ self.project_dir) 
 
         if config_vault_key == None:
             config_vault_key = self.uuid
+            self.dprint(1,"wrn","config_vault_key: not given")
+        self.dprint(1,"cmp","config_vault_key: "+config_vault_key)
+
         if configs_vault_dir == None:
             configs_vault_dir = ".configs"
-        
+            self.dprint(1,"wrn","configs_vault_dir: not given")
+        self.dprint(1,"cmp","configs_vault_dir: "+os.path.join(self.project_dir, configs_vault_dir))
         self.config_vault = ConfigVault(os.path.join(self.project_dir, configs_vault_dir),config_vault_key)
-        self.dprint("[flexistack] - init() - configs dir: "+ os.path.join(self.project_dir, configs_vault_dir)) 
 
     # --------------------------------------------------------------------------------- #
 
-    def dprint(self,*args):
+    def dprint(self,indent,status="str",message=''):
         if self.debug == False:
             return
-        print(*args)                            
-
+        self.console.print(indent,status,message)    
+                          
     # --------------------------------------------------------------------------------- #
         
     @property    
@@ -350,8 +372,7 @@ class Flexistack():
         def _load(module_full_path):  
             try:                     
                 module = SourceFileLoader("module_candidate", module_full_path).load_module()
-                for class_name,_class in inspect.getmembers(module,inspect.isclass):
-                    self.dprint("[flexistack] - load_plugins().load() - check class: "+ class_name)                    
+                for class_name,_class in inspect.getmembers(module,inspect.isclass):                   
                     if hasattr(_class,'_flexi_'):
                         if _class._flexi_.get('type') == "plugin":                
                             autoload_structure = {"type":str, "name": str, "description": str, "version": str}
@@ -367,14 +388,19 @@ class Flexistack():
                             self.plugins[p_name][p_vers] = Plugin(SourceFileLoader( p_name + "v" \
                                                  + str(p_vers) + "_" + module_rnd, 
                                                  module_full_path).load_module(), p_desc,class_name, self)  
-                            self.dprint("[flexistack] - load_plugins().load() - loaded!")                             
+                            self.dprint(1,"cmp","Loaded!")
+                        else:
+                            self.dprint(1,"wrn","Skipped.")      
+                    else:
+                        self.dprint(1,"wrn","Skipped.")                            
             except  Exception as e:
-                self.dprint("[flexistack] - load_plugins().load() - exception: "+ str(e))                
+                self.dprint(1,"err","Exception: "+ str(e))              
                 pass 
             if 'module_candidate' in sys.modules:
                 del sys.modules['module_candidate']
-                
+        self.dprint(0,"inf","Flexistack:load_plugins()")        
         if dir_paths == None:
+            self.dprint(1,"wrn","dir_paths: not given")
             return
         if isinstance(dir_paths,str):
             dir_paths = [dir_paths]
@@ -384,7 +410,7 @@ class Flexistack():
             dir_path = self.get_filepath(dir_path)                    
             modules_paths = [str(path) for path in list(Path(dir_path).rglob("*.py")) ]
             for m_path in modules_paths:
-                self.dprint("[flexistack] - load_plugins() - start loading from file: "+ m_path)                
+                self.dprint(1,"wip","Start loading: "+m_path)          
                 _load(m_path)              
 
     # --------------------------------------------------------------------------------- #
@@ -403,18 +429,26 @@ class Flexistack():
                 module = SourceFileLoader("module_candidate", module_full_path).load_module()
                 classes = inspect.getmembers(module,inspect.isclass)
                 for class_name,_class in classes:
-                    self.dprint("[flexistack] - load_middleware().load() - check class: "+ class_name)                    
+                    if class_name == "Flexistack":
+                        continue
+                    self.dprint(2,"wip","Loading class: "+class_name)                
                     if hasattr(_class,'_flexi_'):
                         if _class._flexi_.get('type') == "middleware":
                             _class(self.middleware)
-                            self.dprint("[flexistack] - load_middleware().load() - loaded!")                             
+                            self.dprint(2,"cmp","Loaded!")
+                        else:
+                            self.dprint(2,"wrn","Skipped.") 
+                    else:
+                        self.dprint(2,"wrn","Skipped.")                                                      
                 del module
             except  Exception as e:
+                self.dprint(1,"err","Exception: "+ str(e))
                 pass 
             if 'module_candidate' in sys.modules:
                 del sys.modules['module_candidate']
-                
+        self.dprint(0,"inf","Flexistack:load_middleware()")         
         if dir_paths == None:
+            self.dprint(1,"wrn","dir_paths: not given")
             return
         if isinstance(dir_paths,str):
             dir_paths = [dir_paths]
@@ -424,7 +458,7 @@ class Flexistack():
             dir_path = self.get_filepath(dir_path)         
             modules_paths = [str(path) for path in list(Path(dir_path).rglob("*.py")) ]
             for m_path in modules_paths:
-                self.dprint("[flexistack] - load_middleware() - start loading from file: "+ m_path)                
+                self.dprint(1,"wip","Start loading: "+m_path)                
                 _load(m_path) 
                 
     # --------------------------------------------------------------------------------- #
@@ -443,39 +477,40 @@ class Flexistack():
             try:
                 elements = []
                 for element in os.listdir(_directory):
-                    self.dprint("[flexistack] - load_actions().add_action() - start loading: "+ element)                    
+                    self.dprint(2,"wip","Start loading: "+element)                   
                     if isdir(join(_directory, element)):
-                        self.dprint("[flexistack] - load_actions().add_action() - load as intermediate positional argument")                        
+                        self.dprint(3,"wip","Try to load as intermediate positional argument.")                      
                         flexiarg_filepath = os.path.abspath(os.path.normpath(os.path.join(_directory, element, ".flexistack")))
                         if not os.path.exists(flexiarg_filepath):
-                            self.dprint("[flexistack] - load_actions().add_action() - skipped")                            
+                            self.dprint(3,"wrn","Skipped.")                           
                             continue    
                         with open(flexiarg_filepath, 'r') as subparse_info_file:
-                            self.dprint("[flexistack] - load_actions().add_action() - load pos.arg special details")                            
+                            self.dprint(3,"wip","Try to load pos.arg special details.")                         
                             subparse_data = json.load(subparse_info_file)
-                            elements.append((subparse_data['z-index'],element,os.path.join(_directory, element),subparse_data['description']))                 
-                    if isfile(join(_directory, element)) and ".py" in element and not ".pyc" in element and not "__init__" in element:
-                        self.dprint("[flexistack] - load_actions().add_action() - load as leaf positional argument")                        
+                            elements.append((subparse_data['z-index'],element,os.path.join(_directory, element),subparse_data['description']))   
+                        self.dprint(3,"cmp","Loaded!")                  
+                    elif isfile(join(_directory, element)) and ".py" in element and not ".pyc" in element and not "__init__" in element:
+                        self.dprint(3,"wip","Try to load as leaf positional argument.")                      
                         command  = element.replace(".py", "")
                         module = SourceFileLoader(command,os.path.join(_directory, element)).load_module()
                         if not hasattr(module,'Action'):
                             del module
-                            self.dprint("[flexistack] - load_actions().add_action() - skipped")                            
+                            self.dprint(3,"wrn","Skipped.")                            
                             continue
                         action = module.Action(None)
                         if not hasattr(action,'_flexi_'):
                             del action, module
-                            self.dprint("[flexistack] - load_actions().add_action() - skipped")                            
+                            self.dprint(3,"wrn","Skipped.")                           
                             continue 
                         autoload_structure = {"type":str, "description": str}
                         if not all(key in action._flexi_ and isinstance(action._flexi_[key], value_type)
                             for key, value_type in autoload_structure.items()):
                             del action, module
-                            self.dprint("[flexistack] - load_actions().add_action() - skipped")                            
+                            self.dprint(3,"wrn","Skipped.")                           
                             return  
                         if action._flexi_.get("type") != "action":
                             del action, module
-                            self.dprint("[flexistack] - load_actions().add_action() - skipped")                             
+                            self.dprint(3,"wrn","Skipped.")                            
                             return                          
                         as_optional = action._flexi_.get('as_optional')
                         description = action._flexi_.get('description')
@@ -483,15 +518,15 @@ class Flexistack():
                             _app[command] = module
                             __subparser = _subparser.add_parser(command,help=description)
                             _app[command].Action(None).set_optional_arguments(__subparser, self)
-                            self.dprint("[flexistack] - load_actions().add_action() - loaded!")                            
+                            self.dprint(3,"cmp","Loaded!")                            
                         elif description != None and as_optional != None:
                             _app[command] = module
                             _parser.add_argument('-'+command[0],'--'+command, action=as_optional, help=description)
-                            self.dprint("[flexistack] - load_actions().add_action() - loaded!")                            
+                            self.dprint(3,"cmp","Loaded!")                            
                         else:
                             pass
                     else:
-                        self.dprint("[flexistack] - load_actions().add_action() - skipped")                                                
+                        self.dprint(3,"wrn","Skipped.")                                                
                 elements.sort(key=lambda tup: tup[0])      
                 for elm in elements:
                     __parser = _subparser.add_parser(elm[1], help=elm[3])
@@ -501,7 +536,9 @@ class Flexistack():
                 raise Exception("Error: Flexistack `dir_paths` actions loading failed")
             return _app
 
+        self.dprint(0,"inf","Flexistack:load_action()")
         if dir_paths == None:
+            self.dprint(1,"wrn","dir_paths: not given")
             return
         
         subparsers  = self.parser.add_subparsers(title="Available actions", dest='action') 
@@ -511,18 +548,15 @@ class Flexistack():
              raise Exception("Error: Flexistack `dir_paths` required argument is not a type of list[str]")   
         for dir_path in dir_paths:
             dir_path = self.get_filepath(dir_path) 
-            self.dprint("[flexistack] - load_actions() - start loading from path: "+ dir_path)                     
+            self.dprint(1,"wip","Start loading from: "+dir_path)                   
             self.actions.update(add_action({},dir_path, self.parser, subparsers))
         pass
     
     # --------------------------------------------------------------------------------- #
 
-    def load(self, middleware_dirs, actions_dirs, plugins_dirs):
-        self.dprint("[flexistack] - load() - start loading middleware")        
-        self.load_middleware(middleware_dirs)
-        self.dprint("[flexistack] - load() - start loading plugins")        
-        self.load_plugins(plugins_dirs)
-        self.dprint("[flexistack] - load() - start loading actions")        
+    def load(self, middleware_dirs, actions_dirs, plugins_dirs):       
+        self.load_middleware(middleware_dirs)       
+        self.load_plugins(plugins_dirs)    
         self.load_actions(actions_dirs)
 
     # --------------------------------------------------------------------------------- #
@@ -571,10 +605,10 @@ class Flexistack():
                 while True:
                     iterration = iterration + 1
                     if iterration > 5:
-                        print("Error: Commands depths cannot be achived (inf.loop.breaker)")
+                        self.dprint(0,"err","Commands depths cannot be achived (inf.loop.breaker)")
                         return False         
                     if (cur_act_level+"_action" in parsed_args) and parsed_args[cur_act_level+"_action"] == None:
-                        print("Error: Incomplete command. Please use -h <--help> for more information")
+                        self.dprint(0,"err","Incomplete command. Please use -h <--help> for more information")
                         return False
                     elif cur_act_level+"_action" in parsed_args:
                         cur_act_level = parsed_args[cur_act_level+"_action"]
@@ -629,9 +663,9 @@ def flexi_action(as_optional, description):
                         if len(self.req_plugins) == 0:
                             return
                         if (set(self.req_plugins) - self.flexistack.plugins.keys()):
-                            print(str(self.__class__)+" - [warn] missing required plugins")
+                            self.flexistack.dprint(0,"wrn",str(self.__class__)+" missing required plugins")
             except:
-                print(str(self.__class__)+" - [warn] plugins could not be loaded")        
+                self.flexistack.dprint(0,"wrn",str(self.__class__)+" plugins could not be loaded")
         
         cls.__init__ = action_init
         return cls
@@ -680,9 +714,9 @@ def flexi_plugin(name,version,description):
                         if len(self.req_plugins) == 0:
                             return
                         if (set(self.req_plugins) - self.flexistack.plugins.keys()):
-                            print(str(self.__class__)+" - [warn] missing required plugins")
+                            self.flexistack.dprint(0,"wrn",str(self.__class__)+" missing required plugins")
             except:
-                print(str(self.__class__)+" - [warn] plugins could not be loaded")        
+                self.flexistack.dprint(0,"wrn",str(self.__class__)+" plugins could not be loaded")        
         
         cls.__init__ = plugin_init
         return cls

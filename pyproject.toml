@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "flexistack"
-version = "0.1.15"
+version = "0.1.16"
 description = "Simple and easy to use framework"
 readme = "README.md"
 authors = [{ name = "Ioannis D (devcoons)", email = "support@devcoons.com" }]
@@ -30,6 +30,8 @@ dependencies = [
     "pyaes==1.6.1",
     "argparse==1.4.0",
     "argparse_addons==0.12.0",
+    "configvault>=0.0.1",
+    "consolio>=0.0.8",
     "pywin32; os_name == 'nt'",
 ]
 

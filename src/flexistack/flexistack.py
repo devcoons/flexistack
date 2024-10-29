@@ -92,9 +92,9 @@ from pathlib import Path
 from genericpath import isdir
 from os.path import isfile, join
 from importlib.machinery import SourceFileLoader
-
+from consolio import Consolio
+from configvault import ConfigVault
 from .helper import Helper
-
 
 #########################################################################################
 # CLASS                                                                                 #
@@ -291,17 +291,19 @@ class Flexistack():
     parser          = None
     parsed_args     = None
     debug           = False    
+    console         = None
 
     # --------------------------------------------------------------------------------- #
     # --------------------------------------------------------------------------------- #
 
-    def __init__(self, project_dir = None, debug = False):
+    def __init__(self, project_dir = None, debug = False, configs_vault_dir = None, config_vault_key = None):
         """
         Constructor method for the Autoloader class.
         """
         self.debug = debug         
         self.uuid   = uuid.uuid4().hex
         self.parser = argparse.ArgumentParser()
+        self.console = Consolio(spinner_type='dots') 
         self.dprint("[flexistack] - init() - uuid: "+ self.uuid)
         if project_dir == None:
             self.dprint("[flexistack] - init() - project_dir not given")                        
@@ -311,8 +313,15 @@ class Flexistack():
                 self.project_dir = os.getcwd()
         else:
             self.project_dir = os.path.abspath(os.path.normpath(project_dir))
-        self.dprint("[flexistack] - init() - project_dir: "+ self.project_dir)            
-            
+        self.dprint("[flexistack] - init() - project_dir: "+ self.project_dir) 
+
+        if config_vault_key == None:
+            config_vault_key = self.uuid
+        if configs_vault_dir == None:
+            configs_vault_dir = ".configs"
+        
+        self.config_vault = ConfigVault(os.path.join(self.project_dir, configs_vault_dir),config_vault_key)
+        self.dprint("[flexistack] - init() - configs dir: "+ os.path.join(self.project_dir, configs_vault_dir)) 
 
     # --------------------------------------------------------------------------------- #
 

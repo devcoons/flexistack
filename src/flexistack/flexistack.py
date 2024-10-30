@@ -321,8 +321,6 @@ class Flexistack():
         self.debug = debug
         self.console = Consolio(spinner_type='dots')
         self.dprint(0,"inf","Flexistack:init()")
-        self.uuid   = uuid.uuid4().hex
-        self.dprint(1,"cmp","uuid: "+ self.uuid)
         self.parser = argparse.ArgumentParser()
         if project_dir == None:
             self.dprint(1,"wrn","project_dir: not given")                        
@@ -333,6 +331,17 @@ class Flexistack():
         else:
             self.project_dir = os.path.abspath(os.path.normpath(project_dir))
         self.dprint(1,"cmp","project_dir: "+ self.project_dir) 
+        _uuid_file = os.path.join(self.project_dir, ".uuid")
+        if os.path.exists(_uuid_file):
+            with open(_uuid_file, 'r') as read_uuid_file:
+                self.uuid = read_uuid_file.readline()
+        else:
+            self.dprint(1,"wrn","uuid: will be generated")    
+            self.uuid   = uuid.uuid4().hex
+            with open(_uuid_file, 'w') as read_uuid_file:
+                read_uuid_file.write(self.uuid)
+         
+        self.dprint(1,"cmp","uuid: "+ self.uuid)
 
         if config_vault_key == None:
             config_vault_key = self.uuid
@@ -533,7 +542,7 @@ class Flexistack():
                     __subparser = __parser.add_subparsers(title='Available commands', dest=elm[1]+'_action')
                     _app = add_action(_app,elm[2],__parser,__subparser)
             except Exception as e:
-                raise Exception("Error: Flexistack `dir_paths` actions loading failed")
+                raise Exception("Error: Flexistack `dir_paths` actions loading failed " + str(e))
             return _app
 
         self.dprint(0,"inf","Flexistack:load_action()")

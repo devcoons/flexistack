@@ -486,7 +486,7 @@ class Flexistack():
             try:
                 elements = []
                 for element in os.listdir(_directory):
-                    self.dprint(2,"wip","Start loading: "+element)                   
+                    self.dprint(2,"wip","Start loading: "+element)                 
                     if isdir(join(_directory, element)):
                         self.dprint(3,"wip","Try to load as intermediate positional argument.")                      
                         flexiarg_filepath = os.path.abspath(os.path.normpath(os.path.join(_directory, element, ".flexistack")))
@@ -499,8 +499,14 @@ class Flexistack():
                             elements.append((subparse_data['z-index'],element,os.path.join(_directory, element),subparse_data['description']))   
                         self.dprint(3,"cmp","Loaded!")                  
                     elif isfile(join(_directory, element)) and ".py" in element and not ".pyc" in element and not "__init__" in element:
-                        self.dprint(3,"wip","Try to load as leaf positional argument.")                      
+                        self.dprint(3,"wip","Try to load as leaf positional argument.")
+                        relative_action = os.path.relpath(_directory, dir_path)
+                        if relative_action == ".":
+                            relative_action = ""
+                        else:
+                            relative_action = relative_action+"/"                      
                         command  = element.replace(".py", "")
+                        action_name = relative_action + command
                         module = SourceFileLoader(command,os.path.join(_directory, element)).load_module()
                         if not hasattr(module,'Action'):
                             del module
@@ -524,12 +530,12 @@ class Flexistack():
                         as_optional = action._flexi_.get('as_optional')
                         description = action._flexi_.get('description')
                         if description != None and as_optional == None and "set_optional_arguments" in list(module.Action.__dict__.keys()):
-                            _app[command] = module
+                            _app[action_name] = module
                             __subparser = _subparser.add_parser(command,help=description)
-                            _app[command].Action(None).set_optional_arguments(__subparser, self)
+                            _app[action_name].Action(None).set_optional_arguments(__subparser, self)
                             self.dprint(3,"cmp","Loaded!")                            
                         elif description != None and as_optional != None:
-                            _app[command] = module
+                            _app[action_name] = module
                             _parser.add_argument('-'+command[0],'--'+command, action=as_optional, help=description)
                             self.dprint(3,"cmp","Loaded!")                            
                         else:
@@ -611,6 +617,7 @@ class Flexistack():
             else:
                 iterration = 0
                 cur_act_level = parsed_args['action']
+                appender = ""
                 while True:
                     iterration = iterration + 1
                     if iterration > 5:
@@ -620,9 +627,10 @@ class Flexistack():
                         self.dprint(0,"err","Incomplete command. Please use -h <--help> for more information")
                         return False
                     elif cur_act_level+"_action" in parsed_args:
+                        appender = appender + cur_act_level+"/"
                         cur_act_level = parsed_args[cur_act_level+"_action"]
                     else:    
-                        obj = self.actions[cur_act_level].Action(self)
+                        obj = self.actions[appender+cur_act_level].Action(self)
                         if obj.init(pargs=parsed_args,project_dir=project_dir) == True:
                             return obj.run()                 
                         return False 

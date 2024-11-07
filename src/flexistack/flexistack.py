@@ -507,7 +507,7 @@ class Flexistack():
                             relative_action = relative_action+"/"                      
                         command  = element.replace(".py", "")
                         action_name = relative_action + command
-                        module = SourceFileLoader(command,os.path.join(_directory, element)).load_module()
+                        module = SourceFileLoader(action_name,os.path.join(_directory, element)).load_module()
                         if not hasattr(module,'Action'):
                             del module
                             self.dprint(3,"wrn","Skipped.")                            
@@ -629,7 +629,7 @@ class Flexistack():
                     elif cur_act_level+"_action" in parsed_args:
                         appender = appender + cur_act_level+"/"
                         cur_act_level = parsed_args[cur_act_level+"_action"]
-                    else:    
+                    else:
                         obj = self.actions[appender+cur_act_level].Action(self)
                         if obj.init(pargs=parsed_args,project_dir=project_dir) == True:
                             return obj.run()                 

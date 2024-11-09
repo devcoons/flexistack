@@ -28,39 +28,39 @@ jobs:
     - name: Extract and Increment Version
       id: version
       run: |
-        # Extract current version from pyproject.toml
-        current_version=$(grep -Po '(?<=^version = ")[^"]*' pyproject.toml)
+           # Extract current version from pyproject.toml
+           current_version=$(grep -Po '(?<=^version = ")[^"]*' pyproject.toml)
 
-        # Split version into major, minor, and patch
-        IFS='.' read -r major minor patch <<< "$current_version"
+           # Split version into major, minor, and patch
+           IFS='.' read -r major minor patch <<< "$current_version"
 
-        # Increment patch version
-        new_version="$major.$minor.$((patch + 1))"
+           # Increment patch version
+           new_version="$major.$minor.$((patch + 1))"
 
-        # Update version in pyproject.toml
-        sed -i "s/^version = \".*\"/version = \"$new_version\"/" pyproject.toml
+           # Update version in pyproject.toml
+           sed -i "s/^version = \".*\"/version = \"$new_version\"/" pyproject.toml
 
-        # Update version in __init__.py
-        sed -i "s/__version__ *= *['\"][^'\"]*['\"]/__version__ = '$new_version'/" src/flexistack/__init__.py
+           # Update version in __init__.py
+           sed -i "s/__version__ *= *['\"][^'\"]*['\"]/__version__ = '$new_version'/" src/flexistack/__init__.py
 
-        # Print new version to set as output
-        echo "::set-output name=new_version::$new_version"
+           # Use environment file for output
+           echo "new_version=$new_version" >> $GITHUB_ENV
 
     - name: Commit updated version
       run: |
-        git config --local user.name "github-actions"
-        git config --local user.email "actions@github.com"
-        git commit -am "Bump version to ${{ steps.version.outputs.new_version }}"
-        git tag ${{ steps.version.outputs.new_version }}
-        git push origin main --tags
+          git config --local user.name "github-actions"
+          git config --local user.email "actions@github.com"
+          git commit -am "Bump version to ${{ env.new_version }}"
+          git tag ${{ env.new_version }}
+          git push origin main --tags
 
     - name: Create GitHub Release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ steps.version.outputs.new_version }}
-        release_name: ${{ steps.version.outputs.new_version }}
+        tag_name: ${{ env.new_version }}
+        release_name: ${{ env.new_version }}
         draft: false
         prerelease: false
 

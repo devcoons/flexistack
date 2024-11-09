@@ -61,7 +61,6 @@ jobs:
         release_name: ${{ steps.version.outputs.new_version }}
         draft: false
         prerelease: false
-        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build package
       run: python -m build

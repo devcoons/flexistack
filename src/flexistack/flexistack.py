@@ -584,16 +584,10 @@ class Flexistack():
     
     # --------------------------------------------------------------------------------- #
 
-    def load(self, middleware_dirs, actions_dirs, plugins_dirs):  
-        x = time.time()      
+    def load(self, middleware_dirs, actions_dirs, plugins_dirs):      
         self.load_middleware(middleware_dirs)     
-        print("load_middleware Loading Time: "+ str(time.time()-x)) 
-        x = time.time() 
         self.load_plugins(plugins_dirs)    
-        print("load_plugins Loading Time: "+ str(time.time()-x))
-        x = time.time() 
         self.load_actions(actions_dirs)
-        print("load_actions Loading Time: "+ str(time.time()-x))
 
     # --------------------------------------------------------------------------------- #
 

@@ -108,7 +108,7 @@ from os.path import isfile, join
 from importlib.machinery import SourceFileLoader
 from consolio import Consolio
 from configvault import ConfigVault
-from helper import Helper
+from .helper import Helper
 
 #########################################################################################
 # CLASS                                                                                 #

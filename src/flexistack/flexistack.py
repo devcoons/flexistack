@@ -49,31 +49,44 @@ def safe_import(package: str, version: str = None, package_as: str = None) -> No
     --------
     None
     """
-    import sys    
-    import importlib           
-    try:        
-        if version is None:
-            importlib.import_module(package)
-        else:
+    import sys
+    import importlib
+
+    if package in sys.modules:
+        module = sys.modules[package]
+        if version:
             import importlib.metadata
-            _version = importlib.metadata.version(package)
-            if version == _version:
-                importlib.import_module(package)
-            else:
-                import subprocess                
-                subprocess.call([sys.executable, "-m", "pip", "uninstall", "-y", package+"=="+_version])
-                subprocess.call([sys.executable, "-m", "pip", "install", package+"=="+version])            
-    except:
-        import subprocess              
-        if version is None:
-            subprocess.call([sys.executable, "-m", "pip", "install", package])
+            installed_version = importlib.metadata.version(package)
+            if installed_version != version:
+                subprocess.call([sys.executable, "-m", "pip", "install", f"{package}=={version}"])
+                module = importlib.import_module(package) 
+        if package_as:
+            globals()[package_as] = module
+        return
+
+    try:
+        module = importlib.import_module(package)
+        if version:
+            import importlib.metadata
+            installed_version = importlib.metadata.version(package)
+            if installed_version != version:
+                subprocess.call([sys.executable, "-m", "pip", "install", f"{package}=={version}"])
+                module = importlib.import_module(package) 
+    except ImportError:
+        install_cmd = [sys.executable, "-m", "pip", "install"]
+        if version:
+            install_cmd.append(f"{package}=={version}")
         else:
-            subprocess.call([sys.executable, "-m", "pip", "install", package+"=="+version])
-    finally:
-        if package_as is None:
-            globals()[package] = importlib.import_module(package)
-        else:
-            globals()[package_as] = importlib.import_module(package)
+            install_cmd.append(package)
+        import subprocess
+        subprocess.call(install_cmd)
+        module = importlib.import_module(package)
+
+    if package_as:
+        globals()[package_as] = module
+    else:
+        globals()[package] = module
+
 
 #########################################################################################
 # IMPORTS                                                                               #
@@ -83,6 +96,7 @@ import os
 import sys
 import uuid
 import json
+import time
 import random
 import string
 import inspect
@@ -94,7 +108,7 @@ from os.path import isfile, join
 from importlib.machinery import SourceFileLoader
 from consolio import Consolio
 from configvault import ConfigVault
-from .helper import Helper
+from helper import Helper
 
 #########################################################################################
 # CLASS                                                                                 #
@@ -331,6 +345,7 @@ class Flexistack():
         else:
             self.project_dir = os.path.abspath(os.path.normpath(project_dir))
         self.dprint(1,"cmp","project_dir: "+ self.project_dir) 
+       
         _uuid_file = os.path.join(self.project_dir, ".uuid")
         if os.path.exists(_uuid_file):
             with open(_uuid_file, 'r') as read_uuid_file:
@@ -569,10 +584,16 @@ class Flexistack():
     
     # --------------------------------------------------------------------------------- #
 
-    def load(self, middleware_dirs, actions_dirs, plugins_dirs):       
-        self.load_middleware(middleware_dirs)       
+    def load(self, middleware_dirs, actions_dirs, plugins_dirs):  
+        x = time.time()      
+        self.load_middleware(middleware_dirs)     
+        print("load_middleware Loading Time: "+ str(time.time()-x)) 
+        x = time.time() 
         self.load_plugins(plugins_dirs)    
+        print("load_plugins Loading Time: "+ str(time.time()-x))
+        x = time.time() 
         self.load_actions(actions_dirs)
+        print("load_actions Loading Time: "+ str(time.time()-x))
 
     # --------------------------------------------------------------------------------- #
 

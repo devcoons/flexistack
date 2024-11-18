@@ -333,10 +333,12 @@ class Flexistack():
         """
         Constructor method for the Autoloader class.
         """
-        if len(sys.argv) > 1:
+        if len(sys.argv) > 1 and '--' in sys.argv:
             _spidx = sys.argv[1:].index('--')
             _internal_args = sys.argv[1:][_spidx+1:]
             sys.argv = sys.argv[:_spidx+1]
+        else:
+            _internal_args = []
 
         self.debug = True if '--debug' in _internal_args else debug
         self.chrono = True if '--chrono' in _internal_args else False

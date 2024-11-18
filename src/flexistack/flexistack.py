@@ -324,6 +324,7 @@ class Flexistack():
     debug           = False    
     console         = None
     config_vault    = None
+    chrono          = False
     
     # --------------------------------------------------------------------------------- #
     # --------------------------------------------------------------------------------- #
@@ -332,7 +333,13 @@ class Flexistack():
         """
         Constructor method for the Autoloader class.
         """
-        self.debug = debug
+        if len(sys.argv) > 1:
+            _spidx = sys.argv[1:].index('--')
+            _internal_args = sys.argv[1:][_spidx+1:]
+            sys.argv = sys.argv[:_spidx+1]
+
+        self.debug = True if '--debug' in _internal_args else debug
+        self.chrono = True if '--chrono' in _internal_args else False
         self.console = Consolio(spinner_type='dots')
         self.dprint(0,"inf","Flexistack:init()")
         self.parser = argparse.ArgumentParser()

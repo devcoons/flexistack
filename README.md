@@ -257,6 +257,84 @@ class Action:
 
 In this example, the action generates a random string by utilizing the dummy-generator plugin. It specifies the length of the string through an optional argument. The action calls the random_string method of the latest version of the dummy-generator plugin, demonstrating how FlexiStack facilitates the interaction between actions and plugins while leveraging plugin versioning to ensure compatibility and flexibility.
 
+## Helper Class
+
+FlexiStack includes a @Helper@ class that provides a collection of commonly used helper functions. This class is accessible via the @flexistack.helper@ property.
+
+### Available Helper Methods
+
+- <b>resolve_path(path):</b> Resolves the given path, resolving any symbolic links if present.
+- <b>shortcut_resolver(item):</b> Resolves a shortcut item to its target path, considering the operating system.
+- <b>get_total_cpu():</b> Returns the total number of CPU cores, including logical and physical cores.
+- <b>generate_random_string(length):</b> Generates a random string of specified length using ASCII letters and digits.
+- <b>generate_random_number(length):</b> Generates a random number string of specified length.
+- <b>get_total_mem():</b> Returns the total virtual and swap memory in gigabytes.
+- <b>filehash_md5(fname):</b> Computes the MD5 hash of the specified file.
+- <b>filehash_sha256(fname):</b> Computes the SHA-256 hash of the specified file.
+- <b>encrypt(key, plaintext):</b> Encrypts the plaintext using AES algorithm with the provided key.
+- <b>decrypt(key, ciphertextb64):</b> Decrypts the base64 encoded ciphertext using AES algorithm with the provided key.
+- <b>split_into_slices(A, slices):</b> Splits the given list into slices as per the provided slices parameter.
+
+You can access the helper methods within your actions or plugins as follows:
+```
+helper = self.flexistack.helper
+random_string = helper.generate_random_string(10)
+print(f"Random String: {random_string}")
+```
+
+## Configuration Vault
+
+FlexiStack integrates @ConfigVault@ to securely store and retrieve configuration data within your application. The @ConfigVault@ is accessible via the @flexistack.config_vault@ property.
+
+### Storing Configuration
+
+Store a configuration dictionary securely under a specific key. Set @force=True@ if you want to overwrite an existing entry.
+
+```
+python data = {"database": "mydb", "user": "admin", "password": "secure_password"}
+self.flexistack.config_vault.store("db_config", data, force=True) # Overwrites if "db_config" exists
+```
+
+### Retrieving Configuration
+
+Retrieve and decrypt stored data by its key.
+
+```
+python retrieved_data = self.flexistack.config_vault.retrieve("db_config") 
+print(retrieved_data) # Output: {"database": "mydb", "user": "admin", "password": "secure_password"} 
+```
+
+### Removing Configurations
+
+To remove a specific configuration by its key, use the @remove@ method.
+
+```python self.flexistack.config_vault.remove("db_config") # Removes the configuration with key "db_config" ```
+
+To remove all stored configurations, use the @remove_all@ method:
+
+```python self.flexistack.config_vault.remove_all() # Clears all configurations ```
+
+
+## Framework Arguments
+
+You can pass framework related arguments by appending `-- <argument>` when you call your software.
+
+### Chrono Mode
+
+The chrono mode when enabled, provides timing information about various operations, such as loading middleware, plugins, actions, and executing actions.
+
+To enable chrono mode, use the `--chrono` command-line argument when running your application:
+
+```python __main__.py <application arguments> -- --chrono```
+
+### Debug Mode
+
+The debug mode that provides detailed debug information during execution. 
+
+To enable debug mode, use the `--debug` command-line argument when running your application:
+
+```python __main__.py <application arguments> -- --debug```
+
 ## Conclusion
 
 FlexiStack simplifies the development of modular Python applications by handling argument parsing and supporting multiple versions of plugins. Its intuitive design allows for quick setup and seamless integration into various project structures.

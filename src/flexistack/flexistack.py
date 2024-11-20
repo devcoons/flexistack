@@ -94,6 +94,7 @@ def safe_import(package: str, version: str = None, package_as: str = None) -> No
 
 import os
 import sys
+import ast
 import uuid
 import json
 import time
@@ -114,19 +115,22 @@ from .helper import Helper
 # CLASS                                                                                 #
 #########################################################################################
 
-class Plugin:
+class FlexiModule:
     """
     A class that wraps a loaded module object and its description.
     """
-    m = None
-    d = None
-    c = None
-    f = None
+    p = None # Module File Path
+    m = None # Module (actual)
+    d = None # Description
+    c = None # Class name
+    f = None # Flexistack instance
+    n = None # Module Actual Name
+    u = None # Module Unique Name
     
     # --------------------------------------------------------------------------------- #
     # --------------------------------------------------------------------------------- #
 
-    def __init__(self, m, d, c, f):
+    def __init__(self, p, d, c, f ,lazy = True):
         """
         Constructor method for the Module class.
 
@@ -134,10 +138,18 @@ class Plugin:
         - m: A reference to a loaded module object.
         - d: A string that describes the module.
         """
-        self.m = m
+        self.p = p
         self.d = d
         self.c = c
         self.f = f        
+        self.n = os.path.splitext(os.path.basename(p))[0]
+        self.u = f"{self.n}_{''.join(random.choices(string.ascii_letters, k=6))}"
+
+        if lazy == False:
+            spec = importlib.util.spec_from_file_location(self.u, self.p)
+            self.m = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(self.m)            
+            sys.modules[self.u] = self.m           
 
     # --------------------------------------------------------------------------------- #
         
@@ -150,13 +162,20 @@ class Plugin:
         - The loaded module object.
         """
         _flexistack = flexistack if flexistack != None else self.f        
+        
+        if self.m == None:
+            spec = importlib.util.spec_from_file_location(self.u, self.p)
+            self.m = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(self.m)            
+            sys.modules[self.u] = self.m
+            
         return getattr(self.m,self.c)(_flexistack) if as_module == False else self.m
 
 #########################################################################################
 # CLASS                                                                                 #
 #########################################################################################
 
-class PluginPack(dict):
+class FlexiModPack(dict):
     """
     A dictionary-like class that stores multiple versions of a 
     module under different version numbers as keys.
@@ -196,46 +215,7 @@ class PluginPack(dict):
 # CLASS                                                                                 #
 #########################################################################################
 
-class Action(dict):
-    """
-    A class that wraps a loaded module object and its description.
-    """
-    m = None
-    d = None
-    p = None
-
-    # --------------------------------------------------------------------------------- #
-    # --------------------------------------------------------------------------------- #
-
-    def __init__(self, m, d, p):
-        """
-        Constructor method for the Module class.
-
-        Args:
-        - m: A reference to a loaded module object.
-        - d: A string that describes the module.
-        """
-        self.m = m
-        self.d = d
-        self.p = p
-
-    # --------------------------------------------------------------------------------- #
-        
-    def __call__(self):
-        """
-        Returns the loaded module object when the Module instance 
-        is called like a function.
-
-        Returns:
-        - The loaded module object.
-        """
-        return self.m
-
-#########################################################################################
-# CLASS                                                                                 #
-#########################################################################################
-
-class Plugins(dict):
+class FlexiModules(dict):
     """
     A dictionary-like class that stores multiple versions of a 
     module under different version numbers as keys.
@@ -317,7 +297,8 @@ class Flexistack():
     project_dir     = None
     uuid            = None
     actions         = {}
-    plugins         = Plugins()
+    _actions        = FlexiModules()
+    plugins         = FlexiModules()
     middleware      = type('', (), {})()
     parser          = None
     parsed_args     = None
@@ -402,6 +383,42 @@ class Flexistack():
         - dir_paths: A string or list of strings representing the path(s) to the directory(ies) 
         containing the plugins to load.  
         """  
+        
+        def _load(module_full_path):
+            with open(module_full_path,'r') as m_file:
+                m_tree = ast.parse(m_file.read(),filename=module_full_path)
+                found = False
+                for node in ast.walk(m_tree):
+                    if found == True:
+                        break
+                    if isinstance(node,ast.ClassDef):
+                        for decorator in node.decorator_list:
+                            if (isinstance(decorator,ast.Call) and hasattr(decorator,'func') 
+                                and hasattr(decorator,'args') and isinstance(decorator.args,list)):
+                                if isinstance(decorator.func,ast.Name) and hasattr(decorator.func,'id'):
+                                    dec_name = decorator.func.id
+                                elif isinstance(decorator.func,ast.Attribute) and hasattr(decorator.func,'attr'):
+                                    dec_name = decorator.func.attr
+                                else:
+                                    self.dprint(2, "wrn", "Skipped.")
+                                    continue    
+                                if dec_name == 'flexi_plugin'  and len(decorator.args)==3:
+                                    p_name = decorator.args[0].value
+                                    p_vers = decorator.args[1].value
+                                    p_desc = decorator.args[2].value                                                   
+                                    if self.plugins.get(p_name) is None:
+                                        self.plugins[p_name] = FlexiModPack()
+                                    self.plugins[p_name][p_vers] = FlexiModule(module_full_path,p_desc, node.name, self)
+                                    self.dprint(2, "cmp", "Loaded!")
+                                    found = True
+                                    break
+                                else:
+                                    self.dprint(2, "wrn", "Skipped.")                                              
+                            else:
+                                self.dprint(2, "wrn", "Skipped.")
+                    else:
+                        self.dprint(2, "wrn", "Skipped.")            
+
         self.dprint(0, "inf", "Flexistack:load_plugins()")        
         if not dir_paths:
             self.dprint(1, "wrn", "dir_paths: not given")
@@ -411,8 +428,6 @@ class Flexistack():
         if not isinstance(dir_paths, list):    
             raise Exception("Error: Flexistack `dir_paths` required argument is not a type of list[str]")   
 
-        autoload_structure = {"type": str, "name": str, "description": str, "version": str}
-
         for dir_path in dir_paths:
             dir_path = self.get_filepath(dir_path)
             for root, dirs, files in os.walk(dir_path):
@@ -421,37 +436,7 @@ class Flexistack():
                         module_full_path = os.path.join(root, filename)
                         self.dprint(1, "wip", "Start loading: " + module_full_path)
                         try:
-                            random_suffix = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
-                            module_base_name = os.path.splitext(filename)[0]
-                            module_name = f"plugin_{module_base_name}_{random_suffix}"
-                            spec = importlib.util.spec_from_file_location(module_name, module_full_path)
-                            module = importlib.util.module_from_spec(spec)
-                            spec.loader.exec_module(module)
-
-                            for attr_name in dir(module):
-                                _class = getattr(module, attr_name)
-                                if isinstance(_class, type) and _class.__module__ == module_name:
-                                    self.dprint(2, "wip", f"Check class (under {module_name}): '{attr_name}'")
-                                    if hasattr(_class, '_flexi_'):
-                                        flexi_attr = _class._flexi_
-                                        if flexi_attr.get('type') == "plugin":
-                                            if not all(key in flexi_attr and isinstance(flexi_attr[key], value_type)
-                                                    for key, value_type in autoload_structure.items()):
-                                                continue
-                                            p_name = flexi_attr['name']
-                                            p_vers = flexi_attr['version']
-                                            p_desc = flexi_attr['description']
-                                            if self.plugins.get(p_name) is None:
-                                                self.plugins[p_name] = PluginPack()
-                                            self.plugins[p_name][p_vers] = Plugin(
-                                                module, p_desc, attr_name, self)
-                                            sys.modules[module_name] = module
-                                            self.dprint(2, "cmp", "Loaded!")
-                                            break  # Stop after loading the first valid plugin class
-                                        else:
-                                            self.dprint(2, "wrn", "Skipped.")
-                                    else:
-                                        self.dprint(2, "wrn", "Skipped.")
+                            _load(module_full_path)
                         except Exception as e:
                             self.dprint(1, "err", "Exception: " + str(e))
                             pass        
@@ -515,92 +500,104 @@ class Flexistack():
         - parser: argparser to be used
         - dir_paths: A string or list of strings representing the path(s) to the directory(ies) 
           containing the plugins to load.  
-        """  
-        def add_action(_app, _directory, _parser, _subparser):  
-            try:
-                elements = []
-                for element in os.listdir(_directory):
-                    if element == '__pycache__' or element == '.flexistack':
-                        continue
-                    self.dprint(2,"inf","Start loading: "+element)                 
-                    if isdir(join(_directory, element)):
-                        self.dprint(3,"wip","Try to load as intermediate positional argument.")                      
-                        flexiarg_filepath = os.path.abspath(os.path.normpath(os.path.join(_directory, element, ".flexistack")))
-                        if not os.path.exists(flexiarg_filepath):
-                            self.dprint(3,"wrn","Skipped.")                           
-                            continue    
-                        with open(flexiarg_filepath, 'r') as subparse_info_file:
-                            self.dprint(3,"wip","Try to load pos.arg special details.")                         
-                            subparse_data = json.load(subparse_info_file)
-                            elements.append((subparse_data['z-index'],element,os.path.join(_directory, element),subparse_data['description']))   
-                        self.dprint(3,"cmp","Loaded!")                  
-                    elif isfile(join(_directory, element)) and ".py" in element and not ".pyc" in element and not "__init__" in element:
-                        self.dprint(3,"wip","Try to load as leaf positional argument.")
-                        relative_action = os.path.relpath(_directory, dir_path)
-                        if relative_action == ".":
-                            relative_action = ""
-                        else:
-                            relative_action = relative_action+"/"                      
-                        command  = element.replace(".py", "")
-                        action_name = relative_action + command
-                        module = SourceFileLoader(action_name,os.path.join(_directory, element)).load_module()
-                        if not hasattr(module,'Action'):
-                            del module
-                            self.dprint(3,"wrn","Skipped.")                            
-                            continue
-                        action = module.Action(None)
-                        if not hasattr(action,'_flexi_'):
-                            del action, module
-                            self.dprint(3,"wrn","Skipped.")                           
-                            continue 
-                        autoload_structure = {"type":str, "description": str}
-                        if not all(key in action._flexi_ and isinstance(action._flexi_[key], value_type)
-                            for key, value_type in autoload_structure.items()):
-                            del action, module
-                            self.dprint(3,"wrn","Skipped.")                           
-                            return  
-                        if action._flexi_.get("type") != "action":
-                            del action, module
-                            self.dprint(3,"wrn","Skipped.")                            
-                            return                          
-                        as_optional = action._flexi_.get('as_optional')
-                        description = action._flexi_.get('description')
-                        if description != None and as_optional == None and "set_optional_arguments" in list(module.Action.__dict__.keys()):
-                            _app[action_name] = module
-                            __subparser = _subparser.add_parser(command,help=description)
-                            _app[action_name].Action(None).set_optional_arguments(__subparser, self)
-                            self.dprint(3,"cmp","Loaded!")                            
-                        elif description != None and as_optional != None:
-                            _app[action_name] = module
-                            _parser.add_argument('-'+command[0],'--'+command, action=as_optional, help=description)
-                            self.dprint(3,"cmp","Loaded!")                            
-                        else:
-                            pass
-                    else:
-                        self.dprint(3,"wrn","Skipped.")                                                
-                elements.sort(key=lambda tup: tup[0])      
-                for elm in elements:
-                    __parser = _subparser.add_parser(elm[1], help=elm[3])
-                    __subparser = __parser.add_subparsers(title='Available commands', dest=elm[1]+'_action')
-                    _app = add_action(_app,elm[2],__parser,__subparser)
-            except Exception as e:
-                raise Exception("Error: Flexistack `dir_paths` actions loading failed " + str(e))
-            return _app
+        """ 
+        
+        def _load(_directory, _parser, _subparser):
+            subdirs = []
+            for itempath in os.listdir(_directory):
+                if itempath == '__pycache__' or itempath == '.flexistack':
+                    continue      
+                self.dprint(2,"wip","Loading: "+itempath)
+                if isdir(join(_directory, itempath)):
+                    self.dprint(3,"wip","Try to load as intermediate positional argument.")                      
+                    dotflexfilepath = os.path.abspath(os.path.normpath(os.path.join(_directory, itempath, ".flexistack")))
+                    if not os.path.exists(dotflexfilepath):
+                        self.dprint(3,"wrn","Skipped.")                           
+                        continue    
+                    with open(dotflexfilepath, 'r') as dotflexfile:
+                        self.dprint(3,"wip","Try to load pos.arg special details.")                         
+                        subdir_data = json.load(dotflexfile)
+                        subdirs.append((subdir_data['z-index'],itempath,os.path.join(_directory, itempath),subdir_data['description']))   
+                    self.dprint(3,"cmp","Loaded!")
+                elif isfile(join(_directory, itempath)) and ".py" in itempath and not ".pyc" in itempath and not "__init__" in itempath:
+                    self.dprint(3,"wip","Try to load as leaf positional argument.")
+                    relative_action = os.path.relpath(_directory, dir_path)
+                    relative_action = '' if relative_action == "." else relative_action + "/"                     
+                    command  = itempath.replace(".py", "")
+                    action_name = relative_action + command
+                    module_full_path = os.path.join(_directory, itempath)
+                    with open(module_full_path,'r') as m_file:
+                        m_tree = ast.parse(m_file.read(),filename=module_full_path)                
+                        found = False
+                        for node in ast.walk(m_tree):                    
+                            if found == True:
+                                break
+                            if isinstance(node,ast.ClassDef):
+                                for decorator in node.decorator_list:
+                                    if found == True:
+                                        break
+                                    if isinstance(decorator,ast.Call) and hasattr(decorator,'func') and hasattr(decorator,'args') and isinstance(decorator.args,list):
+                                        if isinstance(decorator.func,ast.Name) and hasattr(decorator.func,'id'):
+                                            dec_name = decorator.func.id
+                                        elif isinstance(decorator.func,ast.Attribute) and hasattr(decorator.func,'attr'):
+                                            dec_name = decorator.func.attr
+                                        else:
+                                            self.dprint(2, "wrn", "Skipped.")
+                                            continue    
+                                        if dec_name == 'flexi_action'  and len(decorator.args)==2:
+                                            as_optional = decorator.args[0].value
+                                            description = decorator.args[1].value
+                                            if as_optional == None:
+                                                for set_optional_args in node.body:
+                                                    if isinstance(set_optional_args,ast.FunctionDef) and set_optional_args.name == "set_optional_arguments":
+                                                        if self.actions.get(action_name) is None:
+                                                            self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self)                                                        
+                                                            __subparser = _subparser.add_parser(command,help=description)
+                                                            for parg in set_optional_args.body:
+                                                                if isinstance(parg,ast.Expr) and isinstance(parg.value,ast.Call):
+                                                                    v = [arg.value for arg in parg.value.args] 
+                                                                    _act = next((item.value.value for item in parg.value.keywords if item.arg == 'action'), None)
+                                                                    _des = next((item.value.value for item in parg.value.keywords if item.arg == 'help'), None)
+                                                                    if len(v) == 2:
+                                                                        __subparser.add_argument(v[0],v[1],action=_act,help=_des)
+                                                                    elif len(v) == 1:
+                                                                        __subparser.add_argument(v[0],action=_act,help=_des)
+                                                            self.dprint(3, "cmp", "Loaded!") 
+                                                            found = True
+                                                            break
+                                            else:
+                                                if self.actions.get(action_name) is None:
+                                                    self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self)  
+                                                    _parser.add_argument('-'+command[0],'--'+command, action=as_optional, help=description)
+                                                    self.dprint(3,"cmp","Loaded!")
+                                                    found = True
+                                                    break
+                                        else:
+                                            self.dprint(2, "wrn", "Skipped.")  
+                                    else:
+                                        self.dprint(2, "wrn", "Skipped.")   
+            subdirs.sort(key=lambda tup: tup[0])      
+            for dir_details in subdirs:
+                __parser = _subparser.add_parser(dir_details[1], help=dir_details[3])
+                __subparser = __parser.add_subparsers(title='Available commands', dest=dir_details[1]+'_action')
+                _load(dir_details[2],__parser,__subparser)
 
-        self.dprint(0,"inf","Flexistack:load_action()")
-        if dir_paths == None:
-            self.dprint(1,"wrn","dir_paths: not given")
+
+        self.dprint(0, "inf", "Flexistack:load_action()")        
+        if not dir_paths:
+            self.dprint(1, "wrn", "dir_paths: not given")
             return
+        if isinstance(dir_paths, str):
+            dir_paths = [dir_paths]
+        if not isinstance(dir_paths, list):    
+            raise Exception("Error: Flexistack `dir_paths` required argument is not a type of list[str]") 
         
         subparsers  = self.parser.add_subparsers(title="Available actions", dest='action') 
-        if isinstance(dir_paths,str):
-            dir_paths = [dir_paths]
-        if not isinstance(dir_paths,list):
-             raise Exception("Error: Flexistack `dir_paths` required argument is not a type of list[str]")   
+
         for dir_path in dir_paths:
             dir_path = self.get_filepath(dir_path) 
-            self.dprint(1,"wip","Start loading from: "+dir_path)                   
-            self.actions.update(add_action({},dir_path, self.parser, subparsers))
+            self.dprint(1,"wip","Start loading from: "+dir_path)
+            _load(dir_path, self.parser, subparsers)
         pass
     
     # --------------------------------------------------------------------------------- #
@@ -661,7 +658,7 @@ class Flexistack():
                     if parsed_args[opt_action] == True:   
                         sL1 = time.time()
                         sL2 = time.process_time()
-                        obj = self.actions[opt_action].Action(self)
+                        obj = self.actions[opt_action](self)
                         sI1 = time.time()
                         sI2 = time.process_time()
                         if obj.init(project_dir=project_dir) == True:
@@ -762,6 +759,7 @@ def flexi_action(as_optional, description):
                             self.flexistack.dprint(0,"wrn",str(self.__class__)+" missing required plugins")
             except:
                 self.flexistack.dprint(0,"wrn",str(self.__class__)+" plugins could not be loaded")
+                
         cls.__init__ = action_init
         return cls
  

@@ -306,6 +306,7 @@ class Flexistack():
     console         = None
     config_vault    = None
     chrono          = False
+    nolazyload        = False
     
     # --------------------------------------------------------------------------------- #
     # --------------------------------------------------------------------------------- #
@@ -323,6 +324,7 @@ class Flexistack():
 
         self.debug = True if '--debug' in _internal_args else debug
         self.chrono = True if '--chrono' in _internal_args else False
+        self.nolazyload = True if '--no-lazyload' in _internal_args else False
         self.console = Consolio(spinner_type='dots')
         self.dprint(0,"inf","Flexistack:init()")
         self.parser = argparse.ArgumentParser()
@@ -408,7 +410,7 @@ class Flexistack():
                                     p_desc = decorator.args[2].value                                                   
                                     if self.plugins.get(p_name) is None:
                                         self.plugins[p_name] = FlexiModPack()
-                                    self.plugins[p_name][p_vers] = FlexiModule(module_full_path,p_desc, node.name, self)
+                                    self.plugins[p_name][p_vers] = FlexiModule(module_full_path,p_desc, node.name, self, self.nolazyload)
                                     self.dprint(2, "cmp", "Loaded!")
                                     found = True
                                     break
@@ -551,7 +553,7 @@ class Flexistack():
                                                 for set_optional_args in node.body:
                                                     if isinstance(set_optional_args,ast.FunctionDef) and set_optional_args.name == "set_optional_arguments":
                                                         if self.actions.get(action_name) is None:
-                                                            self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self)                                                        
+                                                            self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self, self.nolazyload)                                                        
                                                             __subparser = _subparser.add_parser(command,help=description)
                                                             for parg in set_optional_args.body:
                                                                 if isinstance(parg,ast.Expr) and isinstance(parg.value,ast.Call):
@@ -567,7 +569,7 @@ class Flexistack():
                                                             break
                                             else:
                                                 if self.actions.get(action_name) is None:
-                                                    self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self)  
+                                                    self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self, self.nolazyload)  
                                                     _parser.add_argument('-'+command[0],'--'+command, action=as_optional, help=description)
                                                     self.dprint(3,"cmp","Loaded!")
                                                     found = True

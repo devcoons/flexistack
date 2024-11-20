@@ -445,6 +445,7 @@ class Flexistack():
                                                 self.plugins[p_name] = PluginPack()
                                             self.plugins[p_name][p_vers] = Plugin(
                                                 module, p_desc, attr_name, self)
+                                            sys.modules[module_name] = module
                                             self.dprint(2, "cmp", "Loaded!")
                                             break  # Stop after loading the first valid plugin class
                                         else:

@@ -695,7 +695,7 @@ class Flexistack():
                     else:
                         sL1 = time.time()
                         sL2 = time.process_time()
-                        obj = self.actions[appender+cur_act_level].Action(self)
+                        obj = self.actions[appender+cur_act_level](self)
                         sI1 = time.time()
                         sI2 = time.process_time()
                         if obj.init(pargs=parsed_args,project_dir=project_dir) == True:

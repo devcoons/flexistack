@@ -69,10 +69,10 @@ class Action:
         _print("Application - Testing application")
         _print(" - Available actions: "+str(len(self.flexistack.actions)))
         for action in self.flexistack.actions:
-            if self.flexistack.actions[action].Action._flexi_.get("as_optional") == None:
-                _print("  - "+action+": "+self.flexistack.actions[action].Action._flexi_.get("description"))
+            if self.flexistack.actions[action](None,True).Action._flexi_.get("as_optional") == None:
+                _print("  - "+action+": "+self.flexistack.actions[action].d)
             else:
-                _print("  - --"+action+": "+self.flexistack.actions[action].Action._flexi_.get("description"))    
+                _print("  - --"+action+": "+self.flexistack.actions[action].d)    
         _print(" - Available plugins: "+str(len(self.flexistack.plugins)))   
         for plugin in self.flexistack.plugins:
             versions = self.flexistack.plugins[plugin].versions()

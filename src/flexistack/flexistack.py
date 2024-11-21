@@ -220,6 +220,16 @@ class FlexiModules(dict):
     A dictionary-like class that stores multiple versions of a 
     module under different version numbers as keys.
     """
+
+    def __call__(self, flexistack = None, as_module = False):
+        """
+        Returns an object of the latest version of the module in the ModulePack.
+        """    
+        
+        return self(flexistack,as_module) 
+
+    # --------------------------------------------------------------------------------- #
+
     def info(self):
         """
         Returns a list of all the module names in the Autoloader.
@@ -296,8 +306,7 @@ class Flexistack():
 
     project_dir     = None
     uuid            = None
-    actions         = {}
-    _actions        = FlexiModules()
+    actions         = FlexiModules()
     plugins         = FlexiModules()
     middleware      = type('', (), {})()
     parser          = None

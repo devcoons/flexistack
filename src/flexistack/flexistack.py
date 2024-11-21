@@ -561,7 +561,7 @@ class Flexistack():
                                                                     _act = next((item.value.value for item in parg.value.keywords if item.arg == 'action'), None)
                                                                     _des = next((item.value.value for item in parg.value.keywords if item.arg == 'help'), None)
                                                                     _narg = next((item.value.value for item in parg.value.keywords if item.arg == 'nargs'), None)
-                                                                    _tp = next((item.value.value for item in parg.value.keywords if item.arg == 'type'), None)
+                                                                    _tp = next((eval(item.value.id) for item in parg.value.keywords if item.arg == 'type'), None)
                                                                     if len(v) == 2:
                                                                         __subparser.add_argument(v[0],v[1],type=_tp,nargs=_narg,action=_act,help=_des)
                                                                     elif len(v) == 1:

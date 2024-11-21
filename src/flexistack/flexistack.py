@@ -738,6 +738,64 @@ class Flexistack():
     # --------------------------------------------------------------------------------- #
     # --------------------------------------------------------------------------------- #
 
+    def description(self):
+
+        _actions = []
+
+        def insert_action(actions_list, parts, action_dict):
+            if len(parts) == 1:
+                action_dict['name'] = parts[0]
+                actions_list.append(action_dict)
+            else:
+                group_name = parts[0]
+                for item in actions_list:
+                    if item.get('type') == 'group' and item.get('name') == group_name:
+                        group = item
+                        break
+                else:
+                    group = {
+                        'type': 'group',
+                        'name': group_name,
+                        'actions': []
+                    }
+                    actions_list.append(group)
+                insert_action(group['actions'], parts[1:], action_dict)
+
+        for action_name in self.actions:
+            is_optional = self.actions[action_name](None, True).Action._flexi_.get("as_optional") is not None
+            action_type = "optional" if is_optional else "positional"
+            description = self.actions[action_name].d
+            action_dict = {'type': action_type, 'description': description}
+            parts = action_name.split('/')
+            insert_action(_actions, parts, action_dict)
+
+        _plugins = []
+        for plugin in self.plugins:
+            versions = self.plugins[plugin].versions()
+            versions.sort()
+            _versions = []
+            for v in versions:
+                rv = self.plugins[plugin][v].d or "No available description"
+                _versions.append({str(v): rv})
+            _plugins.append({"name": plugin, "versions": _versions})
+
+        _middleware = []
+
+        for m in self.middleware.__dict__:
+            _middleware.append({
+                "name": m,
+                "description": self.middleware.__dict__[m]._flexi_['description']
+            })
+
+        return  { "components": {
+                    "middleware": _middleware,
+                    "actions": _actions,
+                    "plugins": _plugins
+                }}
+
+    # --------------------------------------------------------------------------------- #
+    # --------------------------------------------------------------------------------- #
+
     def get_filepath(self, paths, project_dir = None):
         _results = []
         _project_dir = project_dir if project_dir != None else self.project_dir

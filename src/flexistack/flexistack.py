@@ -106,7 +106,6 @@ import importlib.util
 from pathlib import Path
 from genericpath import isdir
 from os.path import isfile, join
-from importlib.machinery import SourceFileLoader
 from consolio import Consolio
 from configvault import ConfigVault
 from .helper import Helper
@@ -454,51 +453,60 @@ class Flexistack():
 
     # --------------------------------------------------------------------------------- #
 
+    # --------------------------------------------------------------------------------- #
+
     def load_middleware(self, dir_paths): 
         """
-        Loads middleware from a specified directory and enlists them 
+        Loads middleware from specified directories and enlists them 
         in the Flexistack middleware as properties.
 
         Args:
         - dir_paths: A string or list of strings representing the path(s) to the directory(ies) 
-          containing the middlewares to load.  
+        containing the middlewares to load.  
         """      
-        def _load(module_full_path):  
-            try:    
-                module = SourceFileLoader("module_candidate", module_full_path).load_module()
-                classes = inspect.getmembers(module, lambda obj: inspect.isclass(obj) and obj.__module__ == 'module_candidate')
-                for class_name,_class in classes:
-                    if class_name == "Flexistack":
-                        continue
-                    self.dprint(2,"wip","Check class (under module_candidate): '"+class_name+"'")                
-                    if hasattr(_class,'_flexi_'):
-                        if _class._flexi_.get('type') == "middleware":
-                            _class(self.middleware)
-                            self.dprint(2,"cmp","Loaded!")
-                        else:
-                            self.dprint(2,"wrn","Skipped.") 
-                    else:
-                        self.dprint(2,"wrn","Skipped.")                                                      
-                del module
-            except  Exception as e:
-                self.dprint(1,"err","Exception: "+ str(e))
-                pass 
-            if 'module_candidate' in sys.modules:
-                del sys.modules['module_candidate']
-        self.dprint(0,"inf","Flexistack:load_middleware()")         
-        if dir_paths == None:
-            self.dprint(1,"wrn","dir_paths: not given")
+
+        self.dprint(0, "inf", "Flexistack:load_middleware()")         
+        if dir_paths is None:
+            self.dprint(1, "wrn", "dir_paths: not given")
             return
-        if isinstance(dir_paths,str):
+        if isinstance(dir_paths, str):
             dir_paths = [dir_paths]
-        if not isinstance(dir_paths,list):    
-             raise Exception("Error: Flexistack `dir_paths` required argument is not a type of list[str]")   
+        if not isinstance(dir_paths, list):    
+            raise Exception("Error: Flexistack `dir_paths` required argument is not a type of list[str]")   
+
         for dir_path in dir_paths:     
             dir_path = self.get_filepath(dir_path)         
-            modules_paths = [str(path) for path in list(Path(dir_path).rglob("*.py")) ]
-            for m_path in modules_paths:
-                self.dprint(1,"wip","Start loading: "+m_path)                
-                _load(m_path) 
+            modules_paths = [str(path) for path in Path(dir_path).rglob("*.py")]
+            for module_path in modules_paths:
+                self.dprint(1, "wip", "Start loading: " + module_path)
+                base_name = os.path.splitext(os.path.basename(module_path))[0]
+                unique_suffix = ''.join(random.choices(string.ascii_letters, k=6))
+                module_name = f"{base_name}_{unique_suffix}"
+                try:
+                    spec = importlib.util.spec_from_file_location(module_name, module_path)
+                    if spec is None:
+                        continue
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+
+                    for name, obj in vars(module).items():
+                        if inspect.isclass(obj) and obj.__module__ == module_name:
+                            if name == "Flexistack":
+                                continue
+                            self.dprint(2, "wip", f"Check class (under {module_name}): '{name}'")
+                            if hasattr(obj, '_flexi_'):
+                                if obj._flexi_.get('type') == "middleware":
+                                    sys.modules[module_name] = module
+                                    obj(self.middleware)
+                                    self.dprint(2, "cmp", "Loaded!")
+                                    
+                                else:
+                                    self.dprint(2, "wrn", "Skipped.")
+                            else:
+                                self.dprint(2, "wrn", "Skipped.")
+                except Exception as e:
+                    self.dprint(1, "err", "Exception: " + str(e))
+                    pass
                 
     # --------------------------------------------------------------------------------- #
     

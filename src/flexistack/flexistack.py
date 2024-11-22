@@ -747,7 +747,7 @@ class Flexistack():
     # --------------------------------------------------------------------------------- #
     # --------------------------------------------------------------------------------- #
 
-    def description(self):
+    def description(self, details=False):
 
         _actions = []
 
@@ -774,7 +774,12 @@ class Flexistack():
             is_optional = self.actions[action_name](None, True).Action._flexi_.get("as_optional") is not None
             action_type = "optional" if is_optional else "positional"
             description = self.actions[action_name].d
-            action_dict = {'type': action_type, 'description': description}
+            if details == False:
+                action_dict = {'type': action_type, 'description': description}
+            else:
+                is_loaded = False if self.actions[action_name].m == None else True
+                uname = self.actions[action_name].u
+                action_dict = {'type': action_type, 'description': description, "module_loaded":is_loaded,"module_name":uname}
             parts = action_name.split('/')
             insert_action(_actions, parts, action_dict)
 
@@ -785,7 +790,12 @@ class Flexistack():
             _versions = []
             for v in versions:
                 rv = self.plugins[plugin][v].d or "No available description"
-                _versions.append({str(v): rv})
+                if details == False:
+                    _versions.append({str(v): {"description":rv}})
+                else:
+                    is_loaded = False if self.plugins[plugin][v].m == None else True
+                    uname = self.plugins[plugin][v].u
+                    _versions.append({str(v): {"description":rv,"module_loaded":is_loaded,"module_name":uname}})
             _plugins.append({"name": plugin, "versions": _versions})
 
         _middleware = []

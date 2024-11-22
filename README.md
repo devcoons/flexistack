@@ -54,6 +54,7 @@ if __name__ == "__main__":
 
     # Load actions and plugins
     fstack.load(":core/", ":actions/",":plugins/")
+    # or fstack.load([":core1/", ":core2/"], [":actions1/", ":actions2/"], [":plugins1/", ":plugins2/"])
 
     # Parse arguments
     _, unknown_args = fstack.parse_arguments()
@@ -128,37 +129,47 @@ The structure and behavior of actions are defined by several key elements:
 #### Example: Positional Action
 
 ```Python
+import random
 from flexistack import *
 
 @flexi_action(None, 'Shuffle a given string')
 class Action:
 
+
     def set_optional_arguments(self, parser, modules):
         parser.add_argument('--data', help="Input data to shuffle")
 
     def init(self, **kwargs):
-        self.data = kwargs.get('data', None)
+        self.data = kwargs['pargs'].get('data', None)
         return True
 
     def run(self, **kwargs):
         # Logic to shuffle the data
+        if self.data == None:
+            print ("No data were given.")
+        else:
+            s_list = list(self.data)
+            random.shuffle(s_list)
+            print(''.join(s_list))       
         pass
 ```
 
-#### Example: Optional Action
+#### Example: Optional Action (filename 'version.py')
 
 ```Python
+import json
 from flexistack import *
 
-@flexi_action('store_true', 'Shuffle a given string')
+@flexi_action('store_true', 'Print all the loaded components of the framework')
 class Action:
 
     def init(self, **kwargs):
         return True
 
     def run(self, **kwargs):
-        print("Application Version: 1.0.0")
+        print(json.dumps(self.flexistack.description(),intent=2))
 ```
+
 
 #### Action Invocation and Structure
 
@@ -205,6 +216,7 @@ To implement a plugin, create a directory under the plugins directory of your ap
 #### Example: Dummy Data Generator Plugin (v0.2)
 
 ```Python
+import random
 from flexistack import *
 
 @flexi_plugin("dummy-generator", '0.2', "A plugin to generate dummy data for testing purposes")
@@ -227,6 +239,7 @@ Actions as well as other plugins can utilize plugins by accessing them through t
 #### Example: Generating a Random String in an Action
 
 ```Python
+import random
 from flexistack import *
 
 @flexi_action(None, 'Generate a random string')
@@ -334,6 +347,16 @@ The debug mode that provides detailed debug information during execution.
 To enable debug mode, use the `--debug` command-line argument when running your application:
 
 ```python __main__.py <application arguments> -- --debug```
+
+
+### No Lazy Load
+
+To reduce the startup(init) time of the application, the framework is lazy loading the actions and the plugins and fully loads what is actually going to be used. 
+
+To disable the lazy loading, use the `--no-lazy-load` command-line argument when running your application:
+
+```python __main__.py <application arguments> -- --debug```
+
 
 ## Conclusion
 

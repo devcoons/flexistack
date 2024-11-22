@@ -524,79 +524,82 @@ class Flexistack():
         def _load(_directory, _parser, _subparser):
             subdirs = []
             for itempath in os.listdir(_directory):
-                if itempath == '__pycache__' or itempath == '.flexistack':
-                    continue      
-                self.dprint(2,"wip","Loading: "+itempath)
-                if isdir(join(_directory, itempath)):
-                    self.dprint(3,"wip","Try to load as intermediate positional argument.")                      
-                    dotflexfilepath = os.path.abspath(os.path.normpath(os.path.join(_directory, itempath, ".flexistack")))
-                    if not os.path.exists(dotflexfilepath):
-                        self.dprint(3,"wrn","Skipped.")                           
-                        continue    
-                    with open(dotflexfilepath, 'r') as dotflexfile:
-                        self.dprint(3,"wip","Try to load pos.arg special details.")                         
-                        subdir_data = json.load(dotflexfile)
-                        subdirs.append((subdir_data['z-index'],itempath,os.path.join(_directory, itempath),subdir_data['description']))   
-                    self.dprint(3,"cmp","Loaded!")
-                elif isfile(join(_directory, itempath)) and ".py" in itempath and not ".pyc" in itempath and not "__init__" in itempath:
-                    self.dprint(3,"wip","Try to load as leaf positional argument.")
-                    relative_action = os.path.relpath(_directory, dir_path)
-                    relative_action = '' if relative_action == "." else relative_action + "/"                     
-                    command  = itempath.replace(".py", "")
-                    action_name = relative_action + command
-                    module_full_path = os.path.join(_directory, itempath)
-                    with open(module_full_path,'r') as m_file:
-                        m_tree = ast.parse(m_file.read(),filename=module_full_path)                
-                        found = False
-                        for node in ast.walk(m_tree):                    
-                            if found == True:
-                                break
-                            if isinstance(node,ast.ClassDef):
-                                for decorator in node.decorator_list:
-                                    if found == True:
-                                        break
-                                    if isinstance(decorator,ast.Call) and hasattr(decorator,'func') and hasattr(decorator,'args') and isinstance(decorator.args,list):
-                                        if isinstance(decorator.func,ast.Name) and hasattr(decorator.func,'id'):
-                                            dec_name = decorator.func.id
-                                        elif isinstance(decorator.func,ast.Attribute) and hasattr(decorator.func,'attr'):
-                                            dec_name = decorator.func.attr
-                                        else:
-                                            self.dprint(2, "wrn", "Skipped.")
-                                            continue    
-                                        if dec_name == 'flexi_action'  and len(decorator.args)==2:
-                                            as_optional = decorator.args[0].value
-                                            description = decorator.args[1].value
-                                            if as_optional == None:
-                                                for set_optional_args in node.body:
-                                                    if isinstance(set_optional_args,ast.FunctionDef) and set_optional_args.name == "set_optional_arguments":
-                                                        if self.actions.get(action_name) is None:
-                                                            self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self, self.lazyload)                                                        
-                                                            __subparser = _subparser.add_parser(command,help=description)
-                                                            for parg in set_optional_args.body:
-                                                                if isinstance(parg,ast.Expr) and isinstance(parg.value,ast.Call):
-                                                                    v = [arg.value for arg in parg.value.args] 
-                                                                    _act = next((item.value.value for item in parg.value.keywords if item.arg == 'action'), None)
-                                                                    _des = next((item.value.value for item in parg.value.keywords if item.arg == 'help'), None)
-                                                                    _narg = next((item.value.value for item in parg.value.keywords if item.arg == 'nargs'), None)
-                                                                    _tp = next((eval(item.value.id) for item in parg.value.keywords if item.arg == 'type'), None)
-                                                                    if len(v) == 2:
-                                                                        __subparser.add_argument(v[0],v[1],type=_tp,nargs=_narg,action=_act,help=_des)
-                                                                    elif len(v) == 1:
-                                                                        __subparser.add_argument(v[0],type=_tp,nargs=_narg,action=_act,help=_des)
-                                                            self.dprint(3, "cmp", "Loaded!") 
-                                                            found = True
-                                                            break
+                try:
+                    if itempath == '__pycache__' or itempath == '.flexistack':
+                        continue      
+                    self.dprint(2,"wip","Loading: "+itempath)
+                    if isdir(join(_directory, itempath)):
+                        self.dprint(3,"wip","Try to load as intermediate positional argument.")                      
+                        dotflexfilepath = os.path.abspath(os.path.normpath(os.path.join(_directory, itempath, ".flexistack")))
+                        if not os.path.exists(dotflexfilepath):
+                            self.dprint(3,"wrn","Skipped.")                           
+                            continue    
+                        with open(dotflexfilepath, 'r') as dotflexfile:
+                            self.dprint(3,"wip","Try to load pos.arg special details.")                         
+                            subdir_data = json.load(dotflexfile)
+                            subdirs.append((subdir_data['z-index'],itempath,os.path.join(_directory, itempath),subdir_data['description']))   
+                        self.dprint(3,"cmp","Loaded!")
+                    elif isfile(join(_directory, itempath)) and ".py" in itempath and not ".pyc" in itempath and not "__init__" in itempath:
+                        self.dprint(3,"wip","Try to load as leaf positional argument.")
+                        relative_action = os.path.relpath(_directory, dir_path)
+                        relative_action = '' if relative_action == "." else relative_action + "/"                     
+                        command  = itempath.replace(".py", "")
+                        action_name = relative_action + command
+                        module_full_path = os.path.join(_directory, itempath)
+                        with open(module_full_path,'r') as m_file:
+                            m_tree = ast.parse(m_file.read(),filename=module_full_path)                
+                            found = False
+                            for node in ast.walk(m_tree):                    
+                                if found == True:
+                                    break
+                                if isinstance(node,ast.ClassDef):
+                                    for decorator in node.decorator_list:
+                                        if found == True:
+                                            break
+                                        if isinstance(decorator,ast.Call) and hasattr(decorator,'func') and hasattr(decorator,'args') and isinstance(decorator.args,list):
+                                            if isinstance(decorator.func,ast.Name) and hasattr(decorator.func,'id'):
+                                                dec_name = decorator.func.id
+                                            elif isinstance(decorator.func,ast.Attribute) and hasattr(decorator.func,'attr'):
+                                                dec_name = decorator.func.attr
                                             else:
-                                                if self.actions.get(action_name) is None:
-                                                    self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self, self.lazyload)  
-                                                    _parser.add_argument('-'+command[0],'--'+command, action=as_optional, help=description)
-                                                    self.dprint(3,"cmp","Loaded!")
-                                                    found = True
-                                                    break
+                                                self.dprint(2, "wrn", "Skipped.")
+                                                continue    
+                                            if dec_name == 'flexi_action'  and len(decorator.args)==2:
+                                                as_optional = decorator.args[0].value
+                                                description = decorator.args[1].value
+                                                if as_optional == None:
+                                                    for set_optional_args in node.body:
+                                                        if isinstance(set_optional_args,ast.FunctionDef) and set_optional_args.name == "set_optional_arguments":
+                                                            if self.actions.get(action_name) is None:
+                                                                self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self, self.lazyload)                                                        
+                                                                __subparser = _subparser.add_parser(command,help=description)
+                                                                for parg in set_optional_args.body:
+                                                                    if isinstance(parg,ast.Expr) and isinstance(parg.value,ast.Call):
+                                                                        v = [arg.value for arg in parg.value.args] 
+                                                                        _act = next((item.value.value for item in parg.value.keywords if item.arg == 'action'), None)
+                                                                        _des = next((item.value.value for item in parg.value.keywords if item.arg == 'help'), None)
+                                                                        _narg = next((item.value.value for item in parg.value.keywords if item.arg == 'nargs'), None)
+                                                                        _tp = next((eval(item.value.id) for item in parg.value.keywords if item.arg == 'type'), None)
+                                                                        if len(v) == 2:
+                                                                            __subparser.add_argument(v[0],v[1],type=_tp,nargs=_narg,action=_act,help=_des)
+                                                                        elif len(v) == 1:
+                                                                            __subparser.add_argument(v[0],type=_tp,nargs=_narg,action=_act,help=_des)
+                                                                self.dprint(3, "cmp", "Loaded!") 
+                                                                found = True
+                                                                break
+                                                else:
+                                                    if self.actions.get(action_name) is None:
+                                                        self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self, self.lazyload)  
+                                                        _parser.add_argument('-'+command[0],'--'+command, action=as_optional, help=description)
+                                                        self.dprint(3,"cmp","Loaded!")
+                                                        found = True
+                                                        break
+                                            else:
+                                                self.dprint(2, "wrn", "Skipped.")  
                                         else:
-                                            self.dprint(2, "wrn", "Skipped.")  
-                                    else:
-                                        self.dprint(2, "wrn", "Skipped.")   
+                                            self.dprint(2, "wrn", "Skipped.") 
+                except Exception as e:
+                    self.dprint(2, "err", "Could not be loaded :"+str(e))                                   
             subdirs.sort(key=lambda tup: tup[0])      
             for dir_details in subdirs:
                 __parser = _subparser.add_parser(dir_details[1], help=dir_details[3])

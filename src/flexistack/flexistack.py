@@ -123,13 +123,14 @@ class FlexiModule:
     d = None # Description
     c = None # Class name
     f = None # Flexistack instance
+    t = None # (applicable for actions) (T) positional, (F) optional 
     n = None # Module Actual Name
     u = None # Module Unique Name
     
     # --------------------------------------------------------------------------------- #
     # --------------------------------------------------------------------------------- #
 
-    def __init__(self, p, d, c, f ,lazy = True):
+    def __init__(self, p, d, c, f, t = False ,lazy = True):
         """
         Constructor method for the Module class.
 
@@ -140,7 +141,8 @@ class FlexiModule:
         self.p = p
         self.d = d
         self.c = c
-        self.f = f        
+        self.f = f  
+        self.t = t      
         self.n = os.path.splitext(os.path.basename(p))[0]
         self.u = f"{self.n}_{''.join(random.choices(string.ascii_letters, k=6))}"
 
@@ -418,7 +420,7 @@ class Flexistack():
                                     p_desc = decorator.args[2].value                                                   
                                     if self.plugins.get(p_name) is None:
                                         self.plugins[p_name] = FlexiModPack()
-                                    self.plugins[p_name][p_vers] = FlexiModule(module_full_path,p_desc, node.name, self, self.lazyload)
+                                    self.plugins[p_name][p_vers] = FlexiModule(module_full_path,p_desc, node.name, self, None, self.lazyload)
                                     self.dprint(2, "cmp", "Loaded!")
                                     found = True
                                     break
@@ -575,7 +577,7 @@ class Flexistack():
                                                         for set_optional_args in node.body:
                                                             if isinstance(set_optional_args,ast.FunctionDef) and set_optional_args.name == "set_optional_arguments":
                                                                 if self.actions.get(action_name) is None:
-                                                                    self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self, self.lazyload)                                                        
+                                                                    self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self, 'positional' , self.lazyload)                                                        
                                                                     __subparser = _subparser.add_parser(command,help=description)
                                                                     for parg in set_optional_args.body:
                                                                         if isinstance(parg,ast.Expr) and isinstance(parg.value,ast.Call):
@@ -593,7 +595,7 @@ class Flexistack():
                                                                     break
                                                     else:
                                                         if self.actions.get(action_name) is None:
-                                                            self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self, self.lazyload)  
+                                                            self.actions[action_name] = FlexiModule(module_full_path, description, node.name, self, 'optional', self.lazyload)  
                                                             _parser.add_argument('-'+command[0],'--'+command, action=as_optional, help=description)
                                                             self.dprint(3,"cmp","Loaded!")
                                                             found = True
@@ -771,15 +773,17 @@ class Flexistack():
                 insert_action(group['actions'], parts[1:], action_dict)
 
         for action_name in self.actions:
-            is_optional = self.actions[action_name](None, True).Action._flexi_.get("as_optional") is not None
-            action_type = "optional" if is_optional else "positional"
+            action_type = self.actions[action_name].t
             description = self.actions[action_name].d
             if details == False:
                 action_dict = {'type': action_type, 'description': description}
             else:
                 is_loaded = False if self.actions[action_name].m == None else True
-                uname = self.actions[action_name].u
-                action_dict = {'type': action_type, 'description': description, "module_loaded":is_loaded,"module_name":uname}
+                
+                _muid = self.actions[action_name].u
+                _mclass = self.actions[action_name].c
+                _mpath = self.actions[action_name].p
+                action_dict = {'type': action_type, 'description': description, "module_details":{"id":_muid, "loaded":is_loaded,"class":_mclass,"path":_mpath}}
             parts = action_name.split('/')
             insert_action(_actions, parts, action_dict)
 
@@ -794,8 +798,11 @@ class Flexistack():
                     _versions.append({str(v): {"description":rv}})
                 else:
                     is_loaded = False if self.plugins[plugin][v].m == None else True
-                    uname = self.plugins[plugin][v].u
-                    _versions.append({str(v): {"description":rv,"module_loaded":is_loaded,"module_name":uname}})
+                   
+                    _muid = self.plugins[plugin][v].u
+                    _mclass = self.plugins[plugin][v].c
+                    _mpath = self.plugins[plugin][v].p
+                    _versions.append({str(v): {"description":rv,"module_details":{"id":_muid, "loaded":is_loaded,"class":_mclass,"path":_mpath}}})
             _plugins.append({"name": plugin, "versions": _versions})
 
         _middleware = []

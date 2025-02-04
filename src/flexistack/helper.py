@@ -30,6 +30,7 @@ import platform
 import random
 import string
 import psutil
+import shutil
 import pyaes
 import base64
 
@@ -81,6 +82,31 @@ class Helper:
         Returns the total number of CPU cores, including logical and physical cores.
         """
         return [psutil.cpu_count(logical=False), psutil.cpu_count()]
+
+    # --------------------------------------------------------------------------------- #
+
+    def kill_process_by_name(name):
+        failed = 0
+        for proc in psutils.process_iter(attrs=['pid', 'name']):
+            if name in proc.info['name']:
+                try:
+                    proc.terminate()
+                except:
+                    failed = failed + 1
+        return failed
+
+    # --------------------------------------------------------------------------------- #
+
+    def rm_dir(directory):
+        def rm_readonly(func, path, execinfo):
+            os.chmod(path,stat.S_IWRITE)
+            func(path)
+        try:
+            if os.path.exists(directory) and os.path.isdir(directory):
+                shutil.rmtree(directory, onexc = rm_readonly)
+            return True
+        except:
+            return False
 
     # --------------------------------------------------------------------------------- #
 

@@ -587,9 +587,15 @@ class Flexistack():
                                                                             _narg = next((item.value.value for item in parg.value.keywords if item.arg == 'nargs'), None)
                                                                             _tp = next((eval(item.value.id) for item in parg.value.keywords if item.arg == 'type'), None)
                                                                             if len(v) == 2:
-                                                                                __subparser.add_argument(v[0],v[1],type=_tp,nargs=_narg,action=_act,help=_des)
+                                                                                if _act == 'store_true':
+                                                                                    __subparser.add_argument(v[0],v[1],action=_act,help=_des)
+                                                                                else:
+                                                                                    __subparser.add_argument(v[0],v[1],type=_tp,nargs=_narg,action=_act,help=_des)
                                                                             elif len(v) == 1:
-                                                                                __subparser.add_argument(v[0],type=_tp,nargs=_narg,action=_act,help=_des)
+                                                                                if _act == 'store_true':
+                                                                                    __subparser.add_argument(v[0],action=_act,help=_des)
+                                                                                else:
+                                                                                    __subparser.add_argument(v[0],type=_tp,nargs=_narg,action=_act,help=_des)
                                                                     self.dprint(3, "cmp", "Loaded!") 
                                                                     found = True
                                                                     break

@@ -31,6 +31,7 @@ import random
 import string
 import psutil
 import shutil
+import stat
 import pyaes
 import base64
 

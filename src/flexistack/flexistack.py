@@ -585,17 +585,18 @@ class Flexistack():
                                                                             _act = next((item.value.value for item in parg.value.keywords if item.arg == 'action'), None)
                                                                             _des = next((item.value.value for item in parg.value.keywords if item.arg == 'help'), None)
                                                                             _narg = next((item.value.value for item in parg.value.keywords if item.arg == 'nargs'), None)
+                                                                            _df = next((item.value.value for item in parg.value.keywords if item.arg == 'default'), None)
                                                                             _tp = next((eval(item.value.id) for item in parg.value.keywords if item.arg == 'type'), None)
                                                                             if len(v) == 2:
-                                                                                if _act == 'store_true':
-                                                                                    __subparser.add_argument(v[0],v[1],action=_act,help=_des)
+                                                                                if _act == 'store_true' or _act == 'store_false':
+                                                                                    __subparser.add_argument(v[0],v[1],default=_df,action=_act,help=_des)
                                                                                 else:
-                                                                                    __subparser.add_argument(v[0],v[1],type=_tp,nargs=_narg,action=_act,help=_des)
+                                                                                    __subparser.add_argument(v[0],v[1],default=_df,type=_tp,nargs=_narg,action=_act,help=_des)
                                                                             elif len(v) == 1:
-                                                                                if _act == 'store_true':
-                                                                                    __subparser.add_argument(v[0],action=_act,help=_des)
+                                                                                if _act == 'store_true' or _act == 'store_false':
+                                                                                    __subparser.add_argument(v[0],default=_df,action=_act,help=_des)
                                                                                 else:
-                                                                                    __subparser.add_argument(v[0],type=_tp,nargs=_narg,action=_act,help=_des)
+                                                                                    __subparser.add_argument(v[0],default=_df,type=_tp,nargs=_narg,action=_act,help=_des)
                                                                     self.dprint(3, "cmp", "Loaded!") 
                                                                     found = True
                                                                     break

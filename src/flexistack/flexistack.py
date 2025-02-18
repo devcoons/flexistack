@@ -357,7 +357,7 @@ class Flexistack():
             self.dprint(1,"wrn","uuid: will be generated")    
             self.uuid   = uuid.uuid4().hex
             if not os.path.exists(os.path.join(self.project_dir, "resources")):
-                os.makedirs(os.path.join(self.project_dir," resources"))  
+                os.makedirs(os.path.join(self.project_dir, "resources"))  
             with open(_uuid_file, 'w') as write_uuid_file:
                 write_uuid_file.write(self.uuid)         
         self.dprint(1,"cmp","uuid: "+ self.uuid)
@@ -370,7 +370,7 @@ class Flexistack():
             self.dprint(1,"wrn","version: will be set to 0.0")    
             self.version = "0.0"
             if not os.path.exists(os.path.join(self.project_dir, "resources")):
-                os.makedirs(os.path.join(self.project_dir,"resources"))  
+                os.makedirs(os.path.join(self.project_dir, "resources"))  
             with open(_version_file, 'w') as write_version_file:
                 write_version_file.write(self.version)         
         self.dprint(1,"cmp","version: "+ self.version)

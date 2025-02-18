@@ -564,7 +564,7 @@ class Flexistack():
                         relative_action = os.path.relpath(_directory, dir_path)
                         relative_action = '' if relative_action == "." else relative_action + "/"                     
                         command  = itempath.replace(".py", "")
-                        action_name = relative_action + command
+                        action_name = (relative_action + command).replace("\\","/").replace("\\\\","/").replace("//","/")
                         module_full_path = os.path.join(_directory, itempath)
                         with open(module_full_path,'r') as m_file:
                             try:

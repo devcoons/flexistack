@@ -317,6 +317,7 @@ class Flexistack():
     config_vault    = None
     chrono          = False
     lazyload        = True
+    version         = None
     
     # --------------------------------------------------------------------------------- #
     # --------------------------------------------------------------------------------- #
@@ -348,18 +349,32 @@ class Flexistack():
             self.project_dir = os.path.abspath(os.path.normpath(project_dir))
         self.dprint(1,"cmp","project_dir: "+ self.project_dir) 
        
-        _uuid_file = os.path.join(self.project_dir, ".uuid")
+        _uuid_file = os.path.join(self.project_dir," resources", ".uuid")
         if os.path.exists(_uuid_file):
             with open(_uuid_file, 'r') as read_uuid_file:
                 self.uuid = read_uuid_file.readline()
         else:
             self.dprint(1,"wrn","uuid: will be generated")    
             self.uuid   = uuid.uuid4().hex
-            with open(_uuid_file, 'w') as read_uuid_file:
-                read_uuid_file.write(self.uuid)
-         
+            if not os.path.exists(os.path.join(self.project_dir," resources")):
+                os.makedirs(os.path.join(self.project_dir," resources"))  
+            with open(_uuid_file, 'w') as write_uuid_file:
+                write_uuid_file.write(self.uuid)         
         self.dprint(1,"cmp","uuid: "+ self.uuid)
 
+        _version_file = os.path.join(self.project_dir," resources", ".version")
+        if os.path.exists(_version_file):
+            with open(_version_file, 'r') as read_version_file:
+                self.version = read_version_file.readline()
+        else:
+            self.dprint(1,"wrn","version: will be set to 0.0")    
+            self.version = "0.0"
+            if not os.path.exists(os.path.join(self.project_dir," resources")):
+                os.makedirs(os.path.join(self.project_dir," resources"))  
+            with open(_version_file, 'w') as write_version_file:
+                write_version_file.write(self.version)         
+        self.dprint(1,"cmp","version: "+ self.version)
+        
         if config_vault_key == None:
             config_vault_key = self.uuid
             self.dprint(1,"wrn","config_vault_key: not given")
